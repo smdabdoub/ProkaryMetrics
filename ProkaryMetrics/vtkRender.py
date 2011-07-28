@@ -1,4 +1,4 @@
-from data.calc import fitEllipsoid
+from calc.fitting import fitEllipsoid
 from render.ibc import IBCRenderer
 from render.bacteria import BacteriaLayer
 from render.basic import boolInt
@@ -259,10 +259,9 @@ class IBCRenderPanel(wx.Panel):
         # find the closest marker to the click position
         for i, marker in enumerate(DataStore.Markers()):
             mpos = Vec3f(marker.GetCenter())
-            diff = pos - mpos
-            dlen = diff.length()
+            dlen = (pos - mpos).length()
             if minDist < 0 or dlen < minDist:
-                minDist = diff.length()
+                minDist = dlen
                 minMarker = marker
                 mid = i
         
