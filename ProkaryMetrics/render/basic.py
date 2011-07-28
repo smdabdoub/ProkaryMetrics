@@ -72,7 +72,7 @@ def createEllipsoid(radius, center):
     :@rtype: vtk.vtkActor
     :@return: An actor mapped from a parametric ellipsoid source 
     """
-    tol = 2
+    tol = 0
     # set up the source
     ellipsoid = vtk.vtkParametricEllipsoid()
     ellipsoid.SetXRadius(radius.x+tol)
@@ -90,6 +90,22 @@ def createEllipsoid(radius, center):
     ellipsoidActor.SetPosition(center.x, center.y, center.z)
 
     return ellipsoidActor
+
+
+def createSphere(radius, center):
+    sphere = vtk.vtkSphereSource()
+    sphere.SetCenter(center.x, center.y, center.z)
+    sphere.SetRadius(radius)
+    sphere.SetPhiResolution(20)
+    sphere.SetThetaResolution(20)
+    
+    sphereMapper = vtk.vtkPolyDataMapper()
+    sphereMapper.SetInput(sphere.GetOutput())
+    
+    sphereActor = vtk.vtkActor()
+    sphereActor.SetMapper(sphereMapper)
+    
+    return sphereActor
 
 
 class RenderLayer(object):
