@@ -64,11 +64,30 @@ class DataStore(object):
     @classmethod
     def AddBacterium(cls, bact):
         cls._bacteria.append(bact)
-        
+    
     @classmethod
     def Bacteria(cls):
         return cls._bacteria
+    
+    @classmethod
+    def BacteriaMarkers(cls):
+        """
+        Gathers the user-marked points for each bacterium into a 
+        2D array (3xN) such that each column lists the x,y,z components
+        for a single point.
         
+        :@rtype: list
+        :@return: A 2D list (3xN) where each row is an x,y,z component 
+                  of a single point in 3D space corresponding to a 
+                  user-marked point on a bacterium.
+        """
+        m = []
+        for bact in cls._bacteria:
+            m[0].extend([marker.x for marker in bact.Markers])
+            m[1].extend([marker.y for marker in bact.Markers])
+            m[2].extend([marker.z for marker in bact.Markers])
+        
+        return m
         
     @classmethod
     def AddImageSet(cls, color, filepaths, id=None):
