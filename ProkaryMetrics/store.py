@@ -1,0 +1,119 @@
+"""
+This module contains classes used for storing rendering data.
+
+@author: Shareef Dabdoub
+@organization: The Ohio State University
+@organization: Nationwide Children's Hospital
+"""
+from operator import itemgetter
+
+class DataStore(object):
+    """
+    DataStore is meant to be used as a pseudo-database of bacteria and marker objects.
+    
+    This class provides only class-level members so that it can be used without
+    defining a specific instance or location.
+    """
+    _markers = []
+    _bacteriaActors = []
+    _bacteria = []
+    _imageSets = {}
+    
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def AddMarker(cls, marker):
+        """
+        Adds a marker (sphere actor) instance to the store.
+        
+        @type data: vtkActor
+        @param data: The newly placed marker to include in the store.
+        """
+        # add to the store 
+        cls._markers.append(marker)
+    
+    @classmethod
+    def ClearMarkers(cls):
+        """
+        Removes all markers instance at the specified index
+        """
+        cls._markers = []
+
+    @classmethod
+    def Markers(cls):
+        """
+        Retrieves all markers in the store.
+        
+        @rtype: list
+        @return: A list containing all the markers currently in the store, 
+                 i.e. corresponding to a bacterium
+        """
+        return cls._markers
+    
+
+    @classmethod
+    def AddBacteriumActor(cls, prop):
+        cls._bacteriaActors.append(prop)
+
+    @classmethod
+    def BacteriaActors(cls):
+        return cls._bacteriaActors
+        
+
+    @classmethod
+    def AddBacterium(cls, bact):
+        cls._bacteria.append(bact)
+        
+    @classmethod
+    def Bacteria(cls):
+        return cls._bacteria
+        
+        
+    @classmethod
+    def AddImageSet(cls, color, filepaths, id=None):
+        if id is None:
+            if cls._imageSets:
+                    id = cls.sortImageSets()[-1][0] + 1
+            else:
+                id = 0
+        cls._imageSets[id] = ImageSet(id, color, filepaths)
+        return id
+        
+    @classmethod
+    def GetImageSet(cls, id):
+        """
+        Retrieves the ImageSet corresponding to the given ID.
+        
+        :@type id: int
+        :@param id: The ID of the desired ImageSet
+        :@rtype: ImageSet
+        :@return: The ImageSet object with the matching ID.
+        """
+        if id in cls._imageSets:
+            return cls._imageSets[id]
+    
+    @classmethod
+    def ImageSets(cls):
+        return cls._imageSets
+    
+    @classmethod
+    def sortImageSets(cls):
+        # sort the dict based on key
+        return sorted(cls._imageSets.iteritems(), key=itemgetter(0))
+        
+        
+        
+        
+        
+        
+class ImageSet(object):
+    def __init__(self, id, color, filepaths):
+        self.id = id
+        self.color = color
+        self.filepaths = filepaths
+        
+        
+        
+        
+        
