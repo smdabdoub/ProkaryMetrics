@@ -64,6 +64,14 @@ class Vec3f(object):
     def length(self):
         return math.sqrt( self.x*self.x + self.y*self.y + self.z*self.z )
     
+    def angle(self, other):
+        """
+        Calculates the angle between this and the other vector.
+        dot(a,b) = len(a)*len(b)*cos(t)
+        t = arccos(dot(a,b)/(len(a)*len(b))
+        """ 
+        return math.degrees(math.acos(self.dot(other)/(self.length()*other.length())))
+    
     def dot(self, other):
         """Performs the dot product with the provided vector and returns a scalar"""
         return sum([self.x*other.x, self.y*other.y, self.z*other.z]) 
@@ -71,6 +79,13 @@ class Vec3f(object):
     def cross(self, other):
         """Performs the cross product with the provided vector and returns a new Vec3f"""
         return Vec3f(self.y*other.z - self.z*other.y, self.z*other.x - self.x*other.z, self.x*other.y - self.y*other.x)
+    
+    def midpoint(self, other):
+        """Returns a new Vec3f that is the midpoint between the two"""
+        x = (self.x + other.x) / 2;
+        y = (self.y + other.y) / 2;
+        z = (self.z + other.z) / 2;
+        return Vec3f(x, y, z);
 
     def toTuple(self):
         return (self.x, self.y, self.z)
