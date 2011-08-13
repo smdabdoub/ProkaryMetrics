@@ -3,6 +3,7 @@ Created on Dec 28, 2010
 
 @author: Shareef Dabdoub
 '''
+from data.util import StoreAsMatrix4x4
 from render.basic import (Color, ImageRenderer, boolInt)
 from store import DataStore
 
@@ -70,12 +71,6 @@ class IBCRenderer(ImageRenderer):
         
         self.volumeReader = volumeReader
         self.vtkReader = volumeReader.LoadVTKReader(self.dataSpacing)
-        
-        # Image Subsampling
-        shrink = vtk.vtkImageShrink3D()
-        shrink.SetShrinkFactors(4, 4, 2)
-        shrink.SetInputConnection(self.vtkReader.GetOutputPort())
-        shrink.AveragingOn()
         
         # Gaussian Smoothing
         self.gaussFilter = vtk.vtkImageGaussianSmooth()
@@ -209,7 +204,6 @@ class IBCRenderer(ImageRenderer):
         self.ibcActor.SetVisibility(boolInt(visible))
         self.renwin_update_callback()
         
-
     
     # Properties
     @property
@@ -250,9 +244,13 @@ class IBCRenderer(ImageRenderer):
             if sliceRange[0] > sliceRange[1]:
                 self.volumeReader.sliceRange = [sliceRange[1], sliceRange[0]]
     
+    @property
+    def TransformMatrix(self):
+        return self.ibcActor.GetMatrix()
     
-    
-    
+    @TransformMatrix.setter
+    def TransformMatrix(self, matrix):
+        self.ibcActor.SetUserMatrix(StoreAsMatrix4x4(matrix))
     
 
 import os.path as osp
@@ -328,7 +326,7 @@ class IBCSettingsDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self._cmdUpdate_click, id=self.cmdUpdate.Id)
         
         lblInfoSizer = wx.BoxSizer(wx.HORIZONTAL)
-        lblInfoSizer.Add(wx.StaticText(self, wx.ID_ANY, "Loaded image set:"))
+        lblInfoSizer.Add(wx.StaticText(self, wx.ID_ANY, "Loaded image set: "))
         self.lblImageSet = wx.StaticText(self, wx.ID_ANY, "None")
         lblInfoSizer.Add(self.lblImageSet)
         
@@ -417,7 +415,7 @@ class IBCSettingsDialog(wx.Dialog):
         """
         s = self.ibcRenderer.Settings
         paths = DataStore.GetImageSet(self.ibcRenderer.ImageSetID).filepaths
-        self.lblImageSet.Label = osp.split(osp.commonprefix(paths))[1]
+        self.lblImageSet.Label = osp.split(osp.commonprefix(paths))[1] + '*'
         self.txtSpacingX.Value = str(s['DataSpacing'][0])
         self.txtSpacingY.Value = str(s['DataSpacing'][1])
         self.txtSpacingZ.Value = str(s['DataSpacing'][2])
