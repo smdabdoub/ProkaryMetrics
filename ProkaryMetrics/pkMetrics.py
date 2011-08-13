@@ -6,6 +6,7 @@ from render.ibc import IBCSettingsDialog
 from render.bacteria import BacteriaLayerSettingsDialog
 from settings import RenderActionsPanel
 from store import DataStore
+from vector import Vec3f
 from vtkRender import IBCRenderPanel
 
 import wx
@@ -20,8 +21,14 @@ ID_EXPORT = wx.NewId()
 
 ID_DYNGAUSS = wx.NewId()
 
-ID_FIT_ELLIPSOID = wx.NewId()
+ID_FIT_MVE_ELLIPSOID = wx.NewId()
+ID_FIT_LOWNER_ELLIPSOID = wx.NewId()
 ID_TOGGLE_ELLIPSOID_VIS = wx.NewId()
+
+# Color schemes for orientation coloring
+ID_RGB = wx.NewId()
+ID_GBR = wx.NewId()
+ID_BGR = wx.NewId()
 
 ID_VIEW_IMAGE_LAYER_SETTINGS = wx.NewId()
 ID_VIEW_BACTERIA_LAYER_SETTINGS = wx.NewId()
@@ -38,23 +45,28 @@ class MainWindow(wx.Frame):
 
         # Set up status bar
         self.StatusBar = self.CreateStatusBar(4)
-        self.StatusBar.SetStatusWidths([-3, -1, -1, -1])
+        self.StatusBar.SetStatusWidths([-3, 150, -1, -1])
         self.StatusBar.SetStatusStyles([wx.SB_NORMAL, wx.SB_NORMAL, wx.SB_RAISED, wx.SB_RAISED])
 
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.pnlIBCRender = IBCRenderPanel(self, imode_callback=self.setInteractionMode, 
                                                  rmode_callback=self.setRecordingMode, 
-                                                 ppos_callback=self.setPickerPosition)
+                                                 ppos_callback=self.setPickerPosition,
+                                                 ao=self.AppendOutput)
         self.pnlActions =  RenderActionsPanel(self, self.pnlIBCRender, 
                                               status_callback=self.setMainStatus)
         
+        self.txtOutput = wx.TextCtrl(self, style=wx.TE_READONLY|wx.TE_MULTILINE)
+        self.txtOutput.Hide()
+        
         self.Sizer.Add(self.pnlIBCRender, 1, wx.EXPAND | wx.BOTTOM, 10)
         self.Sizer.Add(self.pnlActions, 0, wx.EXPAND  | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+        self.Sizer.Add(self.txtOutput, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)
         
         # File menu
         fileMenu = wx.Menu()
         # Open file
-        fileMenu.Append(ID_OPEN, "Open File(s)...\tCtrl+O"," Open a file to edit")
+        fileMenu.Append(ID_OPEN, "Open Image File(s)...\tCtrl+O"," Open a file to edit")
         self.Bind(wx.EVT_MENU, self.OnOpen, id=ID_OPEN)
         # Load project
         fileMenu.Append(ID_LOAD_PROJECT, "Load Project...\tCtrl+L"," Open a file to edit")
@@ -70,23 +82,57 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnMenuExit, item)
         
         # Data menu
-        dataMenu = wx.Menu()
-        dataMenu.Append(ID_DYNGAUSS, "Convert to PPM...", 
-        "Convert loaded image set to PPM files for use with the Dynamic Gaussian algorithm.")
-        self.Bind(wx.EVT_MENU, self.OnDynGauss, id=ID_DYNGAUSS)
+#        dataMenu = wx.Menu()
+#        dataMenu.Append(ID_DYNGAUSS, "Convert to PPM...", 
+#        "Convert loaded image set to PPM files for use with the Dynamic Gaussian algorithm.")
+#        self.Bind(wx.EVT_MENU, self.OnDynGauss, id=ID_DYNGAUSS)
         
         # Tools menu
         toolsMenu = wx.Menu()
-        toolsMenu.Append(ID_FIT_ELLIPSOID, "Fit Ellipsoid to IBC", 
-                         """Use the existing recorded bacteria to fit an \
-                         ellipsoid for estimation of volume and general \
-                         shape""")
-        self.Bind(wx.EVT_MENU, self.OnFitEllipsoid, id=ID_FIT_ELLIPSOID)
+        fitSubMenu = wx.Menu()
+        orientSubMenu = wx.Menu()
+        toolsMenu.AppendSubMenu(fitSubMenu, "Volume Estimation", 
+                                """Use the recorded bacteria or placed \
+                                markers to fit an ellipsoid for estimation \
+                                of volume and general shape""")
+        toolsMenu.AppendSubMenu(orientSubMenu, "Orientation",
+                                """Calculate information and statistics about \ 
+                                the orientation of the recorded bacteria \
+                                with respect to the 3 axes""")
+        # Ellipsoid Fitting options
+        fitSubMenu.Append(ID_FIT_MVE_ELLIPSOID, "Fit MVE Ellipsoid", 
+                          "Fit an ellipsoid using the Minimum Volume method")
+        self.Bind(wx.EVT_MENU, self.OnFitEllipsoid, id=ID_FIT_MVE_ELLIPSOID)
+        fitSubMenu.Append(ID_FIT_LOWNER_ELLIPSOID, "Fit Lowner Ellipsoid", 
+                          "Fit an ellipsoid using the Lowner method")
+        self.Bind(wx.EVT_MENU, self.OnFitEllipsoid, id=ID_FIT_LOWNER_ELLIPSOID)
+        
         self.toolsToggleEVis = wx.MenuItem(toolsMenu, ID_TOGGLE_ELLIPSOID_VIS, 
                                       "Toggle Ellipsoid Visibility")
         self.toolsToggleEVis.Enable(False)
-        toolsMenu.AppendItem(self.toolsToggleEVis)
+        fitSubMenu.AppendItem(self.toolsToggleEVis)
         self.Bind(wx.EVT_MENU, self.OnToggleEllipsoidVis, id=ID_TOGGLE_ELLIPSOID_VIS)
+        
+        # Orientation calculation options
+        #   stats
+        itemCalcOrient = wx.MenuItem(toolsMenu, wx.NewId(), "Calculate Orientation Stats",
+                                     "Calculate descriptive statistics for bacteria orientation")
+        orientSubMenu.AppendItem(itemCalcOrient)
+        self.Bind(wx.EVT_MENU, self.OnCalcOrientation, id=itemCalcOrient.GetId())
+        #   color by
+        colorOrientSubMenu = wx.Menu()
+        orientSubMenu.AppendSubMenu(colorOrientSubMenu, "Color Bacteria by Orientation", "sdfds")
+        colorOrientSubMenu.Append(ID_RGB, "XYZ -> RGB", """Color the bacteria by orientation \
+                                  such that the X component is in the Red channel and so on""")
+        colorOrientSubMenu.Append(ID_GBR, "XYZ -> GBR", """Color the bacteria by orientation \
+                                  such that the X component is in the Green channel and so on""")
+        colorOrientSubMenu.Append(ID_BGR, "XYZ -> BGR", """Color the bacteria by orientation \
+                                  such that the X component is in the Blue channel and so on""")
+        self.Bind(wx.EVT_MENU, self.OnColorByOrientation, id=ID_RGB)
+        self.Bind(wx.EVT_MENU, self.OnColorByOrientation, id=ID_GBR)
+        self.Bind(wx.EVT_MENU, self.OnColorByOrientation, id=ID_BGR)
+        
+        # back to the tools menu items
         toolsScreenshot = wx.MenuItem(toolsMenu, wx.NewId(), 'Take Screenshot',
                                       """Saves the contents of the display \
                                       window to an image file""")
@@ -95,14 +141,21 @@ class MainWindow(wx.Frame):
         
         # View menu
         viewMenu = wx.Menu()
+        # Image Layer dlg
         viewMenu.Append(ID_VIEW_IMAGE_LAYER_SETTINGS, "Image Layer Settings", 
                         "Shows a dialog for changing image rendering settings")
         self.Bind(wx.EVT_MENU, self.OnViewImageLayerSettings, 
                   id=ID_VIEW_IMAGE_LAYER_SETTINGS)
+        # Bacteria Layer dlg
         viewMenu.Append(ID_VIEW_BACTERIA_LAYER_SETTINGS, "Bacteria Layer Settings", 
                         "Shows a dialog for changing bacteria rendering settings")
         self.Bind(wx.EVT_MENU, self.OnViewBacteriaLayerSettings, 
                   id=ID_VIEW_BACTERIA_LAYER_SETTINGS)
+        # Output Text Area
+        self.itemVOut = wx.MenuItem(viewMenu, wx.NewId(), "View Output\tCtrl+D",
+                                    "Shows any text output by ProkaryMetrics such as calculations")
+        viewMenu.AppendItem(self.itemVOut)
+        self.Bind(wx.EVT_MENU, self.OnViewOutput, id=self.itemVOut.GetId())
         
         # Menu Bar
         menuBar = wx.MenuBar()
@@ -112,10 +165,13 @@ class MainWindow(wx.Frame):
         menuBar.Append(viewMenu, "View")
         self.SetMenuBar(menuBar)
         
-        # apparently necessary on OSX to force everything to draw
         self.Sizer.Layout()
         self.Show(1)
-
+    
+    
+    def AppendOutput(self, text):
+        self.txtOutput.AppendText(text)
+        self.txtOutput.AppendText("\n")
 
     def setInteractionMode(self, trackball=True):
         status = "Trackball Mode" if trackball else "Joystick Mode"
@@ -272,20 +328,37 @@ class MainWindow(wx.Frame):
 
     # TOOLS MENU
 
-    def OnDynGauss(self, event):
-        dlg = wx.DirDialog(self, "Choose temporary storage directory", "")
-        
-        if dlg.ShowModal() == wx.ID_OK:
-            dynamicGaussian(DataStore.GetImageSet(0).filepaths, dlg.Path)
-
-        dlg.Destroy()
+#    def OnDynGauss(self, event):
+#        dlg = wx.DirDialog(self, "Choose temporary storage directory", "")
+#        
+#        if dlg.ShowModal() == wx.ID_OK:
+#            dynamicGaussian(DataStore.GetImageSet(0).filepaths, dlg.Path)
+#        dlg.Destroy()
         
     def OnFitEllipsoid(self, event):
-        self.pnlIBCRender.RenderFittedEllipsoid()
+        mve = False
+        if event.GetId() == ID_FIT_MVE_ELLIPSOID:
+            mve = True
+        self.pnlIBCRender.RenderFittedEllipsoid(mve=mve)
         self.toolsToggleEVis.Enable(True)
     
     def OnToggleEllipsoidVis(self, event):
         self.pnlIBCRender.ToggleEllipsoidVisibility()
+        
+    def OnCalcOrientation(self, event):
+        self.pnlIBCRender.CalculateOrientations()
+    
+    def OnColorByOrientation(self, event):
+        id = event.GetId()
+        
+        if id == ID_RGB:
+            scheme = Vec3f(0,1,2)
+        if id == ID_GBR:
+            scheme = Vec3f(1,2,0)
+        if id == ID_BGR:
+            scheme = Vec3f(2,1,0)
+            
+        self.pnlIBCRender.ColorByOrientation(scheme)
         
     def TakeScreenshot(self, event):
         fmts = sorted(export.exportClasses.keys())
@@ -301,7 +374,24 @@ class MainWindow(wx.Frame):
             self.setMainStatus("Figure saved to "+path)
         
         dlg.Destroy()
-    
+        
+    def CapturePosition(self, event):
+        dlg = wx.FileDialog(self, "Save data position", "", "", 
+                            "*.npz", wx.FD_SAVE)
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            
+            bactMatrices = self.pnlIBCRender.BacteriaLayer().CaptureBacteriaTransforms()
+            imgMatrix = self.pnlIBCRender.ImageLayer().CaptureTransformMatrix()
+            
+            
+            
+            
+            
+            
+            
+            
+            
         
     # VIEW MENU
     def OnViewImageLayerSettings(self, event):
@@ -309,6 +399,23 @@ class MainWindow(wx.Frame):
         
     def OnViewBacteriaLayerSettings(self, event):
         self.ShowBacteriaLayerSettings()
+        
+    def OnViewOutput(self, event):
+        if self.txtOutput.IsShown():
+            self.itemVOut.Text = "View Output\tCtrl+D"
+            self.txtOutput.Hide()
+        else:
+            self.txtOutput.Show()
+            self.itemVOut.Text = "Hide Output\tCtrl+D"
+            
+        self.Sizer.Layout()
+        #TODO: this is horrible
+        self.SetSize((self.GetSize().width, self.GetSize().height+1))
+        self.SetSize((self.GetSize().width, self.GetSize().height-1))
+        
+        self.Refresh()
+        self.Update()
+        
 
 
 
