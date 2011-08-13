@@ -5,9 +5,12 @@ Created on Jul 24, 2011
 '''
 from store import DataStore
 from vector import Vec3f
+import numpy as np
 import scipy as s
 import scipy.stats as ss
 from collections import namedtuple
+
+import csv
 
 DescriptiveStats = namedtuple('DescriptiveStats', 'mean med std q1 q3')
 
@@ -32,30 +35,61 @@ def communityDistanceStats():
     return generateDescriptiveStats(dist)
 
 
-def communityOrientationStats():
+def communityOrientationStats(angle=True):
     """
     Calculate the orientation of all bacilli as an angle from each of the Euclidean 
-    basis vectors in R^3
+    basis vectors in R^3 or just the dot product.
     
     :@rtype: tuple
     :@return: 
     """
     angles = [[],[],[]]
+    dotprods = [[],[],[]]
+    bacilli = []
+    filaments = []
+    lengths = []
     xbasis = Vec3f(1,0,0)
     ybasis = Vec3f(0,1,0)
     zbasis = Vec3f(0,0,1)
     
-    for bact in DataStore.Bacteria():
+    for i, bact in enumerate(DataStore.Bacteria()):
         blen = len(bact.Markers)
         if blen == 2:
-            v = (bact.Markers[1] - bact.Markers[1]).normalize()
-            angles.append((xbasis.angle(v),
-                          ybasis.angle(v),
-                          zbasis.angle(v)))
+            bacilli.append(DataStore.BacteriaActors()[i])
+            v = bact.Markers[0] - bact.Markers[1]
+            lengths.append(v.length())
+            v.normalize()
+            
+            if angle:
+                angles[0].append(xbasis.angle(v))
+                angles[1].append(ybasis.angle(v))
+                angles[2].append(zbasis.angle(v))
+            else:
+                dotprods[0].append(xbasis.dot(v))
+                dotprods[1].append(ybasis.dot(v))
+                dotprods[2].append(zbasis.dot(v))
+        # calculate filament orientations b/t each two markers
+        if blen > 2:
+            filaments.append(DataStore.BacteriaActors()[i])
+            for i in range(blen):
+                pass
+                
+            
+            
     
-    return (generateDescriptiveStats(angles[0]),
-            generateDescriptiveStats(angles[1]),
-            generateDescriptiveStats(angles[2]))
+#    data = np.hstack((np.array(angles).T, np.array(lengths)[:,np.newaxis]))
+#    
+#    with open('out.csv', 'w') as e:
+#        writer = csv.writer(e, delimiter=',')
+#        writer.writerow(['x','y','z','len'])
+#        writer.writerows(data)
+
+    if angle:
+        return (generateDescriptiveStats(angles[0]),
+                generateDescriptiveStats(angles[1]),
+                generateDescriptiveStats(angles[2]))
+    else:
+        return assemblies, dotprods
 
     
 def generateDescriptiveStats(data):
