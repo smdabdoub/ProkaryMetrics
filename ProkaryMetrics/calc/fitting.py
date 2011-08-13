@@ -13,64 +13,106 @@ from numpy import *
 import numpy.linalg as la
 import vtk
 
-def fitEllipsoid(actorRadius):
+def fitEllipsoid(ds, actorRadius, mve=False):
     """
     Fit an ellipsoid to the existing recorded bacteria for estimation 
     of volume and shape.
+    
+    :@type ds: Vec3f 
+    :@param ds: Data spacing. The ratio of microns/pixel
+    :@type actorRadius: float
+    :@param actorRadius: The radius of the recorded bacteria
+    :@type mve: bool
+    :@param mve: A flag indicating whether to use the MinimumVolumeEllipsoid 
+                 or the Lowner method for fitting.
     
     :@rtype: tuple -> (vtkActor, vtkActor)
     :@return: parametric ellipsoid actor and text actor displaying the volume
     """
     points = [[],[],[]]
+    fBacteria = False
     
     for bact in DataStore.Bacteria():
         points[0].extend([marker.x for marker in bact.Markers])
         points[1].extend([marker.y for marker in bact.Markers])
-        points[2].extend([marker.z for marker in bact.Markers])  
+        points[2].extend([marker.z for marker in bact.Markers])
+        
+    # if no recorded bacteria, use the placed markers
+    if not points[0]:
+        for marker in DataStore.Markers():
+            pt = Vec3f(marker.GetCenter())
+            points[0].append(pt.x)
+            points[1].append(pt.y)
+            points[2].append(pt.z)
+    else:
+        fBacteria = True
+    
+    if not points[0] or len(points[0]) < 9:
+        raise RuntimeError('At least 9 markers are needed to fit an ellipsoid')
+    
     
     # output data to file
-    with open('ellipse.csv', 'w') as e:
-        writer = csv.writer(e, delimiter=',')
-        writer.writerows(points)
+#    with open('ellipse.csv', 'w') as e:
+#        writer = csv.writer(e, delimiter=',')
+#        writer.writerows(points)
     
     
-    
-    
-    A, center = minimumVolumeEllipsoid(array(points), tol=0.001)
+    if mve:
+        print 'fitting MVE'
+        A, center = minimumVolumeEllipsoid(array(points), tol=0.001)
+    else:
+        print 'fitting Lowner'
+        A, center = lownerEllipsoid(array(points), tol=0.001)
     r, RM = extractEllipsoidParams(A)
     radius = Vec3f(r)
+    
     center = Vec3f(list(center[:,0]))
     
-    volume = 4.0/3.0 * math.pi * radius.x * radius.y * radius.z
-    bactVol = bacterialVolume(actorRadius)
+    print str(ds)
+    volume = 4.0/3.0 * math.pi * radius.x * radius.y * radius.z * ds.x * ds.y * ds.z
+    
+    bactVol = bacterialVolume() * ds.x * ds.y * ds.z if fBacteria else 0
     
     ibcDensity = bactVol/volume
     
-    #TODO: apply rotation matrix RM
     rm = vtk.vtkMatrix4x4()
     rm.DeepCopy((RM[0,0], RM[0,1], RM[0,2], center.x,
                  RM[1,0], RM[1,1], RM[1,2], center.y,
                  RM[2,0], RM[2,1], RM[2,2], center.z,
                     0   ,    0   ,    0   , 1))
     
-    ellipsoidTextMapper = vtk.vtkTextMapper()
-    ellipsoidTextMapper.SetInput("Type: %s\nVolume: %d\nRadius: %s\nv/v: %f" % 
-                                 (ellipsoidType(radius), volume, str(radius), ibcDensity))
-    ellipsoidTextMapper.GetTextProperty().SetJustificationToCentered()
-    ellipsoidTextMapper.GetTextProperty().SetVerticalJustificationToCentered()
-    ellipsoidTextMapper.GetTextProperty().SetColor(0.75, 0.75, 0.75)
-    ellipsoidTextMapper.GetTextProperty().SetFontSize(14)
-    ellipsoidTextActor = vtk.vtkActor2D() 
-    ellipsoidTextActor.SetMapper(ellipsoidTextMapper)    
-    ellipsoidTextActor.GetPositionCoordinate().SetCoordinateSystemToWorld()
-    ellipsoidTextActor.GetPositionCoordinate().SetValue(center.x-30, center.y-30, center.z)
+    #TODO: delete at some point
+    # Not necessary since the output text area is available
+    # but useful as an example
+#    ellipsoidTextMapper = vtk.vtkTextMapper()
+#    if fBacteria:
+#        ellipsoidTextMapper.SetInput("Type: %s\nVolume: %d\nRadius: %s\nv/v: %f" % 
+#                                     (ellipsoidType(radius), volume, str(radius), ibcDensity))
+#    else:
+#        ellipsoidTextMapper.SetInput("Type: %s\nVolume: %d\nRadius: %s" % 
+#                                     (ellipsoidType(radius), volume, str(radius)))
+#    ellipsoidTextMapper.GetTextProperty().SetJustificationToCentered()
+#    ellipsoidTextMapper.GetTextProperty().SetVerticalJustificationToCentered()
+#    ellipsoidTextMapper.GetTextProperty().SetColor(0.75, 0.75, 0.75)
+#    ellipsoidTextMapper.GetTextProperty().SetFontSize(14)
+#    ellipsoidTextActor = vtk.vtkActor2D() 
+#    ellipsoidTextActor.SetMapper(ellipsoidTextMapper)    
+#    ellipsoidTextActor.GetPositionCoordinate().SetCoordinateSystemToWorld()
+#    ellipsoidTextActor.GetPositionCoordinate().SetValue(center.x-30, center.y-30, center.z)
     
-    print "Ellipsoid type: ", ellipsoidType(radius)
-    print "Ellipsoid radii: ", str(radius)
-    print "Ellipsoid center: ", str(center)
-    print "Ellipsoid Volume: ", volume
-    print "Bacteria Volume: ", bactVol
-    print "Bacterial Mass to Ellipsoid Volume ratio: ", ibcDensity
+    # make the ellipsoid cover the whole actor since it is fit using the centers
+    radius.x += actorRadius * 0.5
+    radius.y += actorRadius * 0.5
+    radius.z += actorRadius * 0.5
+    
+    out = []
+    out.append("Ellipsoid type:\t%s" % ellipsoidType(radius))
+    out.append("Ellipsoid radii:\t%s" % str(radius))
+    out.append("Ellipsoid center:\t%s" % str(center))
+    out.append("Ellipsoid Volume:\t%f" % volume)
+    if fBacteria:
+        out.append("Bacteria Volume:\t%f" % bactVol)
+        out.append("Bacterial Mass to Ellipsoid Volume ratio:\t%f" % ibcDensity)
     
     ellipsoid = createEllipsoid(radius, Vec3f())
     ellipsoid.SetUserMatrix(rm)
@@ -79,33 +121,35 @@ def fitEllipsoid(actorRadius):
     ellipsoid.GetProperty().SetSpecularPower(5)
     ellipsoid.GetProperty().SetOpacity(0.2)
     
-    return ellipsoid, ellipsoidTextActor
+    return ellipsoid, '\n'.join(out)
 
 
-def bacterialVolume(r):
+def bacterialVolume():
     """
     Calculate the volume of all recorded bacteria.
-    
-    :@type r: int
-    :@param r: The radius of the bacteria (the actor components)
+    Assumes invariant actor radius to assure comparable volumes 
     
     :@rtype: float
     :@return: The total volume of all recorded bacteria 
     """
     accumVol = 0.0
-    cylvol = lambda pt1,pt2: math.pi*r**2*(pt1-pt2).length()
-    spvol = (4.0/3)*math.pi*r**3
+    r = 1
+    cylvol = lambda pt1,pt2: (math.pi)*(r**2)*(pt1-pt2).length()
+    spvol = (4.0/3) * math.pi * r**3
     
     for bact in DataStore.Bacteria():
         for i in range(len(bact.Markers)-1):
-            accumVol += cylvol(bact.Markers[i], bact.Markers[i+1])
+            l = (bact.Markers[i] - bact.Markers[i+1]).length()
+            tmp = cylvol(bact.Markers[i], bact.Markers[i+1])
+            print "cylvol: ", tmp, str(l)
+            accumVol += tmp
         accumVol += spvol
     
     return accumVol
     
 
 def ellipsoidType(radius):
-    tol = 0.5
+    tol = 5
     equiv = lambda x,y: y-tol < x < y+tol
     
     if equiv(radius.x, radius.y) and equiv(radius.y, radius.z):
@@ -180,6 +224,99 @@ def minimumVolumeEllipsoid(P, tol):
     
     return A, c
 
+
+def lownerEllipsoid(P, tol):
+    """
+    Finds an approximation of the Lowner ellipsoid
+    of the points in the columns of P.  The resulting ellipsoid satisfies
+    
+        x=A-repmat(C,size(A,2)); all(dot(x,E*x)<=1)
+    
+    and has a volume of approximately (1+tol) times the minimum volume
+    ellipsoid satisfying the above requirement.
+    
+    A must be real and non-degenerate. tol must be positive.
+    
+    Reference:
+        Khachiyan, Leonid G.  Rounding of Polytopes in the Real Number
+            Model of Computation.  Mathematics of Operations Research,
+            Vol. 21, No. 2 (May, 1996) pp. 307--320.
+            
+    Note: converted to python from Matlab implemetation by Anye Li
+    http://www.mathworks.com/matlabcentral/fileexchange/21930
+    
+    This method is slightly faster than minimumVolumeEllipsoid().
+    
+    :@type P: numpy.ndarray
+    :@param P: (d x N) dimensional array containing N points in R^d.
+    :@type tol: float
+    :@param tol: Error in the solution with respect to the optimal value.
+    
+    :@rtype: tuple
+    :@return: A: (d x d) matrix of the ellipse equation in the 'center form': 
+                  (x-c)' * A * (x-c) = 1 
+              c: 'd' dimensional vector as the center of the ellipse.
+    """
+    n, m = P.shape
+    if n < 1:
+        raise Exception("P must be of at least 1 dimension")
+    
+    # Find the Lowner ellipsoid of the centrally symmetric set lifted
+    # to a hyperplane in a higher dimension.
+    F = khachiyan(vstack((P, ones((1,m)))), tol)
+    # Intersect with the hyperplane where the input points lie.
+    A = F[0:n][:,0:n]
+    b = F[-1][0:n][:,newaxis]
+    c = la.solve(-A,b)
+    E = A/(1-dot(c[:,0].T,b-F[-1][-1])[0])
+    
+    # Force all the points to really be covered.
+    ac = P - tile(c, (1,m))
+    E = E/max(bdot(ac,dot(E,ac)))
+
+    return E, c
+
+def khachiyan(a, tol):
+    n, m = a.shape
+    # Initialize the barycentric coordinate descent.
+    invA = m * la.inv(dot(a, a.T))
+    w = bdot(a, dot(invA, a))
+    
+    # Khachiyan's BCD algorithm for finding the Lowner ellipsoid of a
+    # centrally symmetric set.
+    while True:
+        (_, w_r), (_, r) = extents(w)
+        f = w_r / n
+        epsilon = f - 1
+        if epsilon <= tol: 
+            break
+        g = epsilon / ((n - 1) * f)
+        h = 1 + g 
+        g = g / f
+        b = dot(invA, a[:, r])
+        invA = h * invA - g * b[:, newaxis] * b
+        bTa = dot(b, a)
+        w = h * w - g * (bTa * bTa)
+    
+    return invA / max(bdot(a, dot(invA, a)))
+
+
+
+def bdot(a, b):
+    """
+    Treat two n x m arrays as hstacked column vectors
+    and broadcast the dot product over each of the m columns.
+    
+    :@type a,b: numpy.ndarray
+    :@param a,b: An n x m array 
+    :@rtype: numpy.ndarray
+    :@return: An array of size 1 x m containing the scalar results 
+              of m dot products between each column of a and b.
+    """
+    _, m = a.shape 
+    return array([dot(a[:,i],b[:,i]) for i in range(m)])
+    
+
 def extractEllipsoidParams(A):
     """
     Given a matrix ellipse equation in 'center' form, extract the radii 
@@ -202,18 +339,6 @@ def extractEllipsoidParams(A):
     c = 1/sqrt(D[2,2])
     
     return (a,b,c), V
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def singular(A):
