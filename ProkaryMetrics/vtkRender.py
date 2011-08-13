@@ -1,4 +1,5 @@
 from calc.fitting import fitEllipsoid
+from calc.stat import communityDistanceStats, communityOrientationStats
 from render.ibc import IBCRenderer
 from render.bacteria import BacteriaLayer
 from render.basic import boolInt
@@ -13,8 +14,17 @@ import wx
 class IBCRenderPanel(wx.Panel):
     """
     The panel class used for displaying and interacting with 3D microscope data.
+    
+    :@type imode_callback: func
+    :@param imode_callback: Sets the interaction mode status.    
+    :@type rmode_callback: func
+    :@param rmode_callback: Sets the recording/exploring mode status.
+    :@type ppos_callback: func
+    :@param ppos_callback: Sets the status of the 3D location of the mouse.
+    :@type ao: func
+    :@param ao: Updates the output text area on the main frame.
     """
-    def __init__( self, parent, imode_callback, rmode_callback, ppos_callback, **kwargs ):
+    def __init__( self, parent, imode_callback, rmode_callback, ppos_callback, ao, **kwargs ):
         # initialize Panel
         if 'id' not in kwargs:
             kwargs['id'] = wx.ID_ANY
@@ -29,12 +39,15 @@ class IBCRenderPanel(wx.Panel):
         
         self.setPickerPos = ppos_callback
         
+        self.ao = ao
+        
 
         self.vtkWidget = wxVTKRenderWindowInteractor(self, wx.ID_ANY)
         self.iren = self.vtkWidget._Iren
         self.iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
         
         self.renderer = vtk.vtkRenderer()
+        self.renderer.SetBackground(0,0,0)
         self.imageLayer = IBCRenderer(self.renderer, self.iren.Render)
         self.bacteriaLayer = BacteriaLayer(self.renderer, self.iren.Render)
         
@@ -148,6 +161,27 @@ class IBCRenderPanel(wx.Panel):
         aCamera.Dolly(1.0)
         self.renderer.ResetCameraClippingRange()
         self.iren.Render()
+        
+    
+    def CaptureCamera(self):
+        cam = self.renderer.GetActiveCamera()
+        camDict = {"Position": cam.GetPosition()}
+        camDict["FocalPoint"]= cam.GetFocalPoint()
+        camDict["ViewAngle"] = cam.GetViewAngle()
+        camDict["ViewUp"] = cam.GetViewUp()
+        camDict["ClippingRange"] = cam.GetClippingRange()
+        camDict["ParallelScale"] = cam.GetParallelScale()
+        
+        return camDict
+    
+    def RestoreCamera(self, camDict):
+        cam = self.renderer.GetActiveCamera()
+        cam.SetPosition(camDict["Position"])
+        cam.SetFocalPoint(camDict["FocalPoint"])
+        cam.SetViewAngle(camDict["ViewAngle"])
+        cam.SetViewUp(camDict["ViewUp"])
+        cam.SetClippingRange(camDict["ClippingRange"])
+        cam.SetParallelScale(camDict["ParallelScale"])
 
     def RecordBacterium(self):
         """
@@ -187,24 +221,56 @@ class IBCRenderPanel(wx.Panel):
         
         self.iren.Render()
 
-    def RenderFittedEllipsoid(self):
+    def RenderFittedEllipsoid(self, mve):
         # if fit already exists, clear b/f fitting again
         if self.ellipsoid:
             self.renderer.RemoveActor(self.ellipsoid)
-            self.renderer.RemoveActor(self.ellipsoidTextActor)
             
-        self.ellipsoid, self.ellipsoidTextActor = fitEllipsoid(self.bacteriaLayer.actor_radius)
-        self.renderer.AddActor(self.ellipsoid)
-        self.renderer.AddActor(self.ellipsoidTextActor)
-        self.iren.Render()
+        try:
+            ds = Vec3f(self.imageLayer.dataSpacing)
+            ar = self.bacteriaLayer.actor_radius
+            self.ellipsoid, out = fitEllipsoid(ds, ar, mve)
+            self.ao(out)
+            self.renderer.AddActor(self.ellipsoid)
+            self.iren.Render()
+        except RuntimeError, re:
+            wx.MessageBox(str(re), "Fitting Error", wx.ICON_ERROR | wx.OK)
     
     def ToggleEllipsoidVisibility(self):
         vstate = [1,0]
         if self.ellipsoid:
             self.ellipsoid.SetVisibility(vstate[self.ellipsoid.GetVisibility()])
-            self.ellipsoidTextActor.SetVisibility(vstate[self.ellipsoidTextActor.GetVisibility()])
+            
+    def CalculateOrientations(self):
+        ds = communityOrientationStats(angle=True)
+        
+        for s in ds:
+            self.ao(str(s))
+            
+    def ColorByOrientation(self, colorScheme=None):
+        assemblies, dotprods = communityOrientationStats(angle=False)
+        dotprods = [map(abs, dotprods[i]) for i in range(3)]
+        
+        if colorScheme is None:
+            colorScheme = Vec3f(2,1,0)
+        
+        for i, a in enumerate(assemblies):
+            aColl = vtk.vtkPropCollection()
+            a.GetActors(aColl)
+            if aColl.GetNumberOfItems() == 3:
+                aColl.InitTraversal()
+                actors = [aColl.GetNextProp() for _ in range(aColl.GetNumberOfItems())]
+                
+                for actor in actors:
+                    actor.GetProperty().SetDiffuseColor(dotprods[colorScheme.x][i], 
+                                                        dotprods[colorScheme.y][i], 
+                                                        dotprods[colorScheme.z][i])
 
+        self.iren.Render()
 
+    def CalculateCommunityDensity(self):
+        ds = communityDistanceStats()
+        self.ao(str(ds))
     
     # ACCESSORS/MODIFIERS
     @property
@@ -238,7 +304,7 @@ class IBCRenderPanel(wx.Panel):
 #        return self.bactRenderer
 
 
-    # EVENT HANDLING
+    # MOUSE HANDLING
     def LeftClick(self, iren, event):
         if self.recordingMode:
             pos = Vec3f(self.picker.GetPickPosition())
@@ -273,6 +339,7 @@ class IBCRenderPanel(wx.Panel):
             self.iren.Render()
 
     
+    # KEY PRESS EVENT HANDLING
     def OnKeyDown(self, iren, event):
         key = iren.GetKeyCode().upper()
         if key == 'T':
@@ -288,10 +355,6 @@ class IBCRenderPanel(wx.Panel):
                 self.setRecordingMode()
         elif key == 'D':
             self.OnDeleteRequest()
-        elif key == ',':
-            self.MoveEllipsoid()
-        elif key == '.':
-            self.MoveEllipsoidText()
             
     
     def OnDeleteRequest(self):
@@ -314,18 +377,6 @@ class IBCRenderPanel(wx.Panel):
         # make sure the user clicked somewhere near a marker before removing
         if minDist <= self.bacteriaLayer.actor_radius * 5:
             self.DeleteBacterium(bactID)
-            
-    def MoveEllipsoid(self):
-        if self.ellipsoid:
-            pos = Vec3f(self.picker.GetPickPosition())
-            self.ellipsoid.SetPosition(pos.x, pos.y, pos.z)
-            self.iren.Render()
-    
-    def MoveEllipsoidText(self):
-        if self.ellipsoidTextActor:
-            pos = Vec3f(self.picker.GetPickPosition())
-            self.ellipsoidTextActor.SetPosition((pos.x, pos.y))
-            self.iren.Render()
 
  
     def MoveCursor(self, iren, event=""):
