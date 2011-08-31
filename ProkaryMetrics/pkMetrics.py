@@ -1,7 +1,7 @@
 from data.io import saveProject, loadProject, exportData, dynamicGaussian
 from data.imageIO import export
 import data.imageIO.types as imageIOTypes
-from render.basic import GreenColor
+from render.basic import IBCColor
 from render.ibc import IBCSettingsDialog
 from render.bacteria import BacteriaLayerSettingsDialog
 from settings import RenderActionsPanel
@@ -173,8 +173,9 @@ class MainWindow(wx.Frame):
         self.txtOutput.AppendText(text)
         self.txtOutput.AppendText("\n")
 
-    def setInteractionMode(self, trackball=True):
-        status = "Trackball Mode" if trackball else "Joystick Mode"
+    #TODO: finish changing this over
+    def setInteractionMode(self, vcam=True):
+        status = "View Camera Mode" if vcam else "Capture Camera Mode"
         self.StatusBar.SetStatusText(status, 3)
         
     def setRecordingMode(self, flag=True):
@@ -200,7 +201,7 @@ class MainWindow(wx.Frame):
         
     #TODO: generalize for multiple image sets
     def AddImageSet(self, imgReader):
-        id = DataStore.AddImageSet(GreenColor, imgReader.FilePaths)
+        id = DataStore.AddImageSet(IBCColor, imgReader.FilePaths)
         self.pnlIBCRender.RenderImageData(id, imgReader)        
         self.ShowRenderSettings()
         
@@ -361,7 +362,7 @@ class MainWindow(wx.Frame):
         self.pnlIBCRender.ColorByOrientation(scheme)
         
     def TakeScreenshot(self, event):
-        fmts = sorted(export.exportClasses.keys())
+        fmts = export.exportClasses.keys()
         dlg = wx.FileDialog(self, "Take Screenshot", "", "", 
                             export.exportFormats, wx.FD_SAVE)
         if dlg.ShowModal() == wx.ID_OK:
@@ -369,9 +370,12 @@ class MainWindow(wx.Frame):
             fileSplit = dlg.GetFilename().split('.')
             if (fileSplit[len(fileSplit)-1].lower() not in fmts):
                 path += '.'+fmts[dlg.GetFilterIndex()]
+                
+#            self.pnlIBCRender.switchCameras()
             export.saveScreen(path, fmts[dlg.GetFilterIndex()], 
                               self.pnlIBCRender.iren.GetRenderWindow())
             self.setMainStatus("Figure saved to "+path)
+#            self.pnlIBCRender.switchCameras()
         
         dlg.Destroy()
         
