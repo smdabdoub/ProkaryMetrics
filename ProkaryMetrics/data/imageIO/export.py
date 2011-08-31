@@ -7,13 +7,13 @@ Export image data to disk
 '''
 import vtk
 
-exportClasses = {'bmp': vtk.vtkBMPWriter, 'jpg': vtk.vtkJPEGWriter, 
-               'png': vtk.vtkPNGWriter, 'pnm': vtk.vtkPNMWriter, 
-               'ps':  vtk.vtkPostScriptWriter, 'tiff': vtk.vtkTIFFWriter}
+exportClasses = {'png': vtk.vtkPNGWriter, 'jpg': vtk.vtkJPEGWriter, 
+                 'tiff': vtk.vtkTIFFWriter, 'pnm': vtk.vtkPNMWriter, 
+                 'ps':  vtk.vtkPostScriptWriter, 'bmp': vtk.vtkBMPWriter}
 
-exportFormats = '|'.join(['BMP (*.bmp)|*.bmp', 'JPG (*.JPG)|*.jpg', 
-                          'PNG (*.png)|*.png', 'PNM (*.pnm)|*.pnm', 
-                          'PostScript (*.ps)|*.ps', 'TIFF (*.tiff)|*.tiff'])
+exportFormats = '|'.join(['PNG (*.png)|*.png', 'JPG (*.JPG)|*.jpg', 
+                          'TIFF (*.tiff)|*.tiff', 'PNM (*.pnm)|*.pnm', 
+                          'PostScript (*.ps)|*.ps', 'BMP (*.bmp)|*.bmp'])
 
 def saveScreen(path, type, renWin):
     imageFilter = vtk.vtkWindowToImageFilter()
