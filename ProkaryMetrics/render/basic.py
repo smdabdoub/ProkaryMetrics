@@ -54,10 +54,12 @@ class Color(object):
 
 
 
-RedColor = Color((1.0, 0.2, 0.2))
-GreenColor = Color((0.2, 1.0, 0.2))
-BlueColor = Color((0.2, 0.2, 1.0))
+#RedColor = Color((1.0, 0.2, 0.2))
+#GreenColor = Color((0.2, 1.0, 0.2))
+#BlueColor = Color((0.2, 0.2, 1.0))
 WhiteColor = Color((1.0, 1.0, 1.0))
+IBCColor = Color((0, 0.76, 0.063))
+BacteriaColor = Color((1.0, 0.57, 0))
     
 
 def createEllipsoid(radius, center):
