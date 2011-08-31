@@ -37,7 +37,6 @@ class VolumeImageReader(object):
         else:
             self.sliceRange = sliceRange
         
-        self.reader.SetFileNames(self.imageArray)
         self.reader.SetDataExtent(self.pixelExtents[0],
                                       self.pixelExtents[1],
                                       self.pixelExtents[2],
@@ -46,6 +45,7 @@ class VolumeImageReader(object):
                                       self.sliceRange[1])
         self.reader.SetDataByteOrderToLittleEndian() 
         self.reader.SetDataSpacing(self.dataSpacing)
+        self.reader.SetFileNames(self.imageArray)
         
         return self.reader
     
@@ -87,5 +87,6 @@ def getImageSize(fname):
     @return: The number of pixels in the x and y dimensions of the image.
     """
     im = Image.open(fname)
+    print im.size
     return im.size
     
