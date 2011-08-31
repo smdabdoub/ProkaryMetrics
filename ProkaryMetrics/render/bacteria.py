@@ -8,7 +8,7 @@ related to user-created bacteria.
 '''
 from data.objects import Bacterium
 from data.util import CopyMatrix4x4, StoreAsMatrix4x4
-from render.basic import (Color, RenderLayer, RedColor, boolInt)
+from render.basic import (Color, RenderLayer, BacteriaColor, boolInt)
 from store import DataStore
 from vector import Vec3f
 
@@ -16,7 +16,7 @@ import vtk
 import wx
 
 class BacteriaLayer(RenderLayer):
-    def __init__(self, renderer, renwin_update_callback, color=RedColor):
+    def __init__(self, renderer, renwin_update_callback, color=BacteriaColor):
         """
         :@type renderer: vtk.vtkRenderer
         :@param renderer: The 'canvas' into which the bacteria should 
