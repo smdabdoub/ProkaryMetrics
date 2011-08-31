@@ -69,27 +69,33 @@ def communityOrientationStats(angle=True):
                 dotprods[1].append(ybasis.dot(v))
                 dotprods[2].append(zbasis.dot(v))
         # calculate filament orientations b/t each two markers
-        if blen > 2:
-            filaments.append(DataStore.BacteriaActors()[i])
-            for i in range(blen):
-                pass
-                
+#        if blen > 2:
+#            filaments.append(DataStore.BacteriaActors()[i])
+#            for j in range(blen-1):
+#                v = bact.Markers[j] - bact.Markers[j+1]
+#                v.normalize()
+#                dotprods[0].append(xbasis.dot(v))
+#                dotprods[1].append(ybasis.dot(v))
+#                dotprods[2].append(zbasis.dot(v))
+#                print "filament ", j, ": ", dotprods[0][-1], dotprods[1][-1], dotprods[2][-1]
+#            print "\n"
             
             
     
-#    data = np.hstack((np.array(angles).T, np.array(lengths)[:,np.newaxis]))
-#    
-#    with open('out.csv', 'w') as e:
-#        writer = csv.writer(e, delimiter=',')
-#        writer.writerow(['x','y','z','len'])
-#        writer.writerows(data)
+    data = np.hstack((np.array(dotprods).T, np.array(lengths)[:,np.newaxis]))
+    
+    with open('out.csv', 'w') as e:
+        writer = csv.writer(e, delimiter=',')
+        writer.writerow(['x','y','z','len'])
+        writer.writerows(data)
 
     if angle:
         return (generateDescriptiveStats(angles[0]),
                 generateDescriptiveStats(angles[1]),
                 generateDescriptiveStats(angles[2]))
     else:
-        return assemblies, dotprods
+        return bacilli, filaments, dotprods
+
 
     
 def generateDescriptiveStats(data):
