@@ -71,7 +71,8 @@ def fitEllipsoid(ds, actorRadius, mve=False):
     print str(ds)
     volume = 4.0/3.0 * math.pi * radius.x * radius.y * radius.z * ds.x * ds.y * ds.z
     
-    bactVol = bacterialVolume() * ds.x * ds.y * ds.z if fBacteria else 0
+    #bactVol = bacterialVolume() * ds.x * ds.y * ds.z if fBacteria else 0
+    bactVol = bacterialVolume(ds) if fBacteria else 0
     
     ibcDensity = bactVol/volume
     
@@ -116,15 +117,16 @@ def fitEllipsoid(ds, actorRadius, mve=False):
     
     ellipsoid = createEllipsoid(radius, Vec3f())
     ellipsoid.SetUserMatrix(rm)
-    ellipsoid.GetProperty().SetDiffuseColor(1, 1, 1)
-    ellipsoid.GetProperty().SetSpecular(.1)
+#    ellipsoid.GetProperty().SetDiffuseColor(1, 0.84, 0)  # gold
+    ellipsoid.GetProperty().SetDiffuseColor(1, 1, 1)   # white
+    ellipsoid.GetProperty().SetSpecular(.5)
     ellipsoid.GetProperty().SetSpecularPower(5)
-    ellipsoid.GetProperty().SetOpacity(0.2)
+    ellipsoid.GetProperty().SetOpacity(0.1)
     
     return ellipsoid, '\n'.join(out)
 
 
-def bacterialVolume():
+def bacterialVolume(ds):
     """
     Calculate the volume of all recorded bacteria.
     Assumes invariant actor radius to assure comparable volumes 
@@ -139,13 +141,15 @@ def bacterialVolume():
     
     for bact in DataStore.Bacteria():
         for i in range(len(bact.Markers)-1):
-            l = (bact.Markers[i] - bact.Markers[i+1]).length()
-            tmp = cylvol(bact.Markers[i], bact.Markers[i+1])
-            print "cylvol: ", tmp, str(l)
-            accumVol += tmp
+            v = cylvol(convert(bact.Markers[i], ds), 
+                       convert(bact.Markers[i+1], ds))
+            accumVol += v
         accumVol += spvol
     
     return accumVol
+
+def convert(pt, ds):
+    return Vec3f(pt.x*ds.x, pt.y*ds.y, pt.z*ds.z)
     
 
 def ellipsoidType(radius):
