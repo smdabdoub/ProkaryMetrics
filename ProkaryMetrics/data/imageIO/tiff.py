@@ -15,11 +15,14 @@ class VolumeTIFFReader(VolumeImageReader):
     def TIFFReader(self):
         return self.reader
     
+    #TODO: this should be partially generalized to the base class
+    #TODO: it could call the base function and pass it the vtkTIFFReader class
     @classmethod
     def FileExtensionsDescriptor(cls):
-        # cheap way
-        #return 'TIFF Images|*.TIF;*.tif;*.tiff'
-        # dynamic way
+        """
+        Grab the acceptable variations on the file extension and return 
+        in the format required by the wx system for file dialogs.
+        """
         descriptor = 'TIFF Images'
         extensions = vtk.vtkTIFFReader().GetFileExtensions().split(' ')
         extensions.extend([item.upper() for item in extensions])
