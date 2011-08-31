@@ -31,7 +31,7 @@ class IBCRenderPanel(wx.Panel):
         wx.Panel.__init__( self, parent, **kwargs )
 
         self.setInteractionMode = imode_callback
-        self.setInteractionMode(False)
+        self.setInteractionMode(True)
         
         self.recordingMode = False
         self.setRecordingMode = rmode_callback
@@ -50,6 +50,8 @@ class IBCRenderPanel(wx.Panel):
         self.renderer.SetBackground(0,0,0)
         self.imageLayer = IBCRenderer(self.renderer, self.iren.Render)
         self.bacteriaLayer = BacteriaLayer(self.renderer, self.iren.Render)
+        
+        self.viewCamActive = True
         
         # for interactive clipping
         self.planes = vtk.vtkPlanes()
@@ -147,18 +149,26 @@ class IBCRenderPanel(wx.Panel):
         # and Position form a vector direction. Later on (ResetCamera() method)
         # this vector is used to position the camera to look at the data in
         # this direction.
-        aCamera = vtk.vtkCamera()
-        aCamera.SetViewUp(0, 0, -1)
-        aCamera.SetPosition(0, 1.1, 2)
-        aCamera.SetFocalPoint(0, -0.25, 0)
-        aCamera.ComputeViewPlaneNormal()
+        self.viewCam = vtk.vtkCamera()
+        self.viewCam.SetViewUp(0, 0, -1)
+        self.viewCam.SetPosition(0, 1.1, 2)
+        self.viewCam.SetFocalPoint(0, -0.25, 0)
+        self.viewCam.ComputeViewPlaneNormal()
+        
+        # This camera should generally stay stationary, 
+        # and only be used for taking screenshots
+        self.picCam = vtk.vtkCamera()
+        self.picCam.SetViewUp(0, 0, -1)
+        self.picCam.SetPosition(0, 1.1, 2)
+        self.picCam.SetFocalPoint(0, -0.25, 0)
+        self.picCam.ComputeViewPlaneNormal()
         
         # Actors are added to the renderer. An initial camera view is created.
         # The Dolly() method moves the camera towards the FocalPoint,
         # thereby enlarging the image.
-        self.renderer.SetActiveCamera(aCamera)
+        self.renderer.SetActiveCamera(self.viewCam)
         self.renderer.ResetCamera() 
-        aCamera.Dolly(1.0)
+        self.viewCam.Dolly(1.0)
         self.renderer.ResetCameraClippingRange()
         self.iren.Render()
         
@@ -248,25 +258,44 @@ class IBCRenderPanel(wx.Panel):
             self.ao(str(s))
             
     def ColorByOrientation(self, colorScheme=None):
-        assemblies, dotprods = communityOrientationStats(angle=False)
+        bacilli, filaments, dotprods = communityOrientationStats(angle=False)
         dotprods = [map(abs, dotprods[i]) for i in range(3)]
         
         if colorScheme is None:
             colorScheme = Vec3f(2,1,0)
         
-        for i, a in enumerate(assemblies):
+        for i, a in enumerate(bacilli):
             aColl = vtk.vtkPropCollection()
             a.GetActors(aColl)
-            if aColl.GetNumberOfItems() == 3:
-                aColl.InitTraversal()
-                actors = [aColl.GetNextProp() for _ in range(aColl.GetNumberOfItems())]
-                
-                for actor in actors:
-                    actor.GetProperty().SetDiffuseColor(dotprods[colorScheme.x][i], 
-                                                        dotprods[colorScheme.y][i], 
-                                                        dotprods[colorScheme.z][i])
+            aColl.InitTraversal()
+            actors = [aColl.GetNextProp() for _ in range(aColl.GetNumberOfItems())]
+            
+            for actor in actors:
+                actor.GetProperty().SetDiffuseColor(dotprods[colorScheme.x][i], 
+                                                    dotprods[colorScheme.y][i], 
+                                                    dotprods[colorScheme.z][i])
+#        for j, a in enumerate(filaments):
+#            aColl = vtk.vtkPropCollection()
+#            a.GetActors(aColl)
+#            aColl.InitTraversal()
+#            actors = [aColl.GetNextProp() for _ in range(aColl.GetNumberOfItems())]
+#            
+#            self.setColor(actors[0], i+j, dotprods, colorScheme)
+#            for k in range(1, len(actors)-1):
+#                self.setColor(actors[k], i+j+k, dotprods, colorScheme)
+#            self.setColor(actors[-1], i+j+k, dotprods, colorScheme)
+            
 
         self.iren.Render()
+        
+    def setColor(self, actor, idx, dots, cs):
+        actor.GetProperty().SetDiffuseColor(dots[cs.x][idx], 
+                                            dots[cs.y][idx], 
+                                            dots[cs.z][idx])
+        actor.GetProperty().SetSpecularColor(1, 0.84, 0)
+        actor.GetProperty().SetSpecularPower(5.0)
+        actor.GetProperty().SetOpacity(0.9)
+    
 
     def CalculateCommunityDensity(self):
         ds = communityDistanceStats()
@@ -355,7 +384,17 @@ class IBCRenderPanel(wx.Panel):
                 self.setRecordingMode()
         elif key == 'D':
             self.OnDeleteRequest()
+        elif key == 'C':
+            self.switchCameras()
             
+    
+    def switchCameras(self):
+        if self.viewCamActive:
+            self.viewCamActive = False
+            self.renderer.SetActiveCamera(self.picCam)
+        else:
+            self.viewCamActive = True
+            self.renderer.SetActiveCamera(self.viewCam)
     
     def OnDeleteRequest(self):
         minDist = -1
