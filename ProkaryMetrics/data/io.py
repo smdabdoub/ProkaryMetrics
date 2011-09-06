@@ -4,6 +4,7 @@ Created on Jan 19, 2011
 @author: shareef
 '''
 from store import DataStore
+from vector import Vec3f
 
 import csv
 import os
@@ -20,6 +21,7 @@ def saveProject(path, settings):
     store['settings'] = settings
     store['imagesets'] = DataStore.ImageSets()
     store['bacteria'] = DataStore.Bacteria()
+    store['markers'] = [Vec3f(m.GetCenter()) for m in DataStore.Markers()]
     
     store.close()
     
@@ -38,6 +40,10 @@ def loadProject(path):
         
     for bacterium in store['bacteria']:
         DataStore.AddBacterium(bacterium)
+        
+    if 'markers' in store:
+        for marker in store['markers']:
+            DataStore.AddMarker(marker)
     
     settings = store['settings']
     store.close()
@@ -65,6 +71,34 @@ def exportData(path):
             writer.writerow(row)
     finally:
         f.close
+        
+        
+def writeCSV(data, header, fname='out.csv'):
+    """
+    Takes a list/array of sequences and writes it to 
+    disk as a CSV file.
+    
+    :@type data: list/array
+    :@param data: Each entry must be a list/array even if there 
+                  is only one element. e.g. [[1],[2],...].
+    :@type header: list
+    :@param header: The header row for the csv file with column names.
+    :@type fname: str
+    :@param fname: The filename to use when saving the output file.
+                   '.csv' will be appended if not present.
+    """
+    if '.csv' != os.path.splitext(fname)[1]:
+        fname += '.csv'
+        
+    with open(fname, 'w') as e:
+        writer = csv.writer(e, delimiter=',')
+        writer.writerow(header)
+        writer.writerows(data)
+        
+        
+        
+        
+        
         
         
 import subprocess
