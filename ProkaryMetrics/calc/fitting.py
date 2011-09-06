@@ -13,6 +13,8 @@ from numpy import *
 import numpy.linalg as la
 import vtk
 
+HFF = 2.86
+
 def fitEllipsoid(ds, actorRadius, mve=False):
     """
     Fit an ellipsoid to the existing recorded bacteria for estimation 
@@ -56,23 +58,30 @@ def fitEllipsoid(ds, actorRadius, mve=False):
 #        writer = csv.writer(e, delimiter=',')
 #        writer.writerows(points)
     
+    points = array(points)
+    
+    fpoints = 2.8 * points
     
     if mve:
         print 'fitting MVE'
-        A, center = minimumVolumeEllipsoid(array(points), tol=0.001)
+        A, center = minimumVolumeEllipsoid(points, tol=0.001)
+        fA, fcenter = lownerEllipsoid(fpoints, tol=0.001)
     else:
         print 'fitting Lowner'
-        A, center = lownerEllipsoid(array(points), tol=0.001)
-    r, RM = extractEllipsoidParams(A)
+        A, center = lownerEllipsoid(points, tol=0.001)
+        fA, fcenter = lownerEllipsoid(fpoints, tol=0.001)
+    
+    r, RM   = extractEllipsoidParams(A)
+    fr, fRM = extractEllipsoidParams(fA)
     radius = Vec3f(r)
+    fradius = Vec3f(fr)
     
     center = Vec3f(list(center[:,0]))
     
     print str(ds)
-    volume = 4.0/3.0 * math.pi * radius.x * radius.y * radius.z * ds.x * ds.y * ds.z
+    volume = 4.0/3.0 * math.pi * fradius.x * fradius.y * fradius.z * ds.x * ds.y * ds.z
     
-    #bactVol = bacterialVolume() * ds.x * ds.y * ds.z if fBacteria else 0
-    bactVol = bacterialVolume(ds) if fBacteria else 0
+    bactVol = bacterialVolume() * ds.x * ds.y * ds.z if fBacteria else 0
     
     ibcDensity = bactVol/volume
     
@@ -82,34 +91,12 @@ def fitEllipsoid(ds, actorRadius, mve=False):
                  RM[2,0], RM[2,1], RM[2,2], center.z,
                     0   ,    0   ,    0   , 1))
     
-    #TODO: delete at some point
-    # Not necessary since the output text area is available
-    # but useful as an example
-#    ellipsoidTextMapper = vtk.vtkTextMapper()
-#    if fBacteria:
-#        ellipsoidTextMapper.SetInput("Type: %s\nVolume: %d\nRadius: %s\nv/v: %f" % 
-#                                     (ellipsoidType(radius), volume, str(radius), ibcDensity))
-#    else:
-#        ellipsoidTextMapper.SetInput("Type: %s\nVolume: %d\nRadius: %s" % 
-#                                     (ellipsoidType(radius), volume, str(radius)))
-#    ellipsoidTextMapper.GetTextProperty().SetJustificationToCentered()
-#    ellipsoidTextMapper.GetTextProperty().SetVerticalJustificationToCentered()
-#    ellipsoidTextMapper.GetTextProperty().SetColor(0.75, 0.75, 0.75)
-#    ellipsoidTextMapper.GetTextProperty().SetFontSize(14)
-#    ellipsoidTextActor = vtk.vtkActor2D() 
-#    ellipsoidTextActor.SetMapper(ellipsoidTextMapper)    
-#    ellipsoidTextActor.GetPositionCoordinate().SetCoordinateSystemToWorld()
-#    ellipsoidTextActor.GetPositionCoordinate().SetValue(center.x-30, center.y-30, center.z)
-    
     # make the ellipsoid cover the whole actor since it is fit using the centers
-    radius.x += actorRadius * 0.5
-    radius.y += actorRadius * 0.5
-    radius.z += actorRadius * 0.5
+    radius += actorRadius
     
     out = []
-    out.append("Ellipsoid type:\t%s" % ellipsoidType(radius))
-    out.append("Ellipsoid radii:\t%s" % str(radius))
-    out.append("Ellipsoid center:\t%s" % str(center))
+    out.append("Ellipsoid type:\t%s" % ellipsoidType(fradius))
+    out.append("Ellipsoid radii:\t%s" % str(fradius))
     out.append("Ellipsoid Volume:\t%f" % volume)
     if fBacteria:
         out.append("Bacteria Volume:\t%f" % bactVol)
@@ -117,16 +104,15 @@ def fitEllipsoid(ds, actorRadius, mve=False):
     
     ellipsoid = createEllipsoid(radius, Vec3f())
     ellipsoid.SetUserMatrix(rm)
-#    ellipsoid.GetProperty().SetDiffuseColor(1, 0.84, 0)  # gold
-    ellipsoid.GetProperty().SetDiffuseColor(1, 1, 1)   # white
-    ellipsoid.GetProperty().SetSpecular(.5)
+    ellipsoid.GetProperty().SetDiffuseColor(1, 1, 1)
+    ellipsoid.GetProperty().SetSpecular(.1)
     ellipsoid.GetProperty().SetSpecularPower(5)
-    ellipsoid.GetProperty().SetOpacity(0.1)
+    ellipsoid.GetProperty().SetOpacity(0.2)
     
     return ellipsoid, '\n'.join(out)
 
 
-def bacterialVolume(ds):
+def bacterialVolume():
     """
     Calculate the volume of all recorded bacteria.
     Assumes invariant actor radius to assure comparable volumes 
@@ -141,9 +127,12 @@ def bacterialVolume(ds):
     
     for bact in DataStore.Bacteria():
         for i in range(len(bact.Markers)-1):
-            v = cylvol(convert(bact.Markers[i], ds), 
-                       convert(bact.Markers[i+1], ds))
-            accumVol += v
+#            v = cylvol(convert(bact.Markers[i], ds), 
+#                       convert(bact.Markers[i+1], ds))
+#            l = (HFF*bact.Markers[i] - HFF*bact.Markers[i+1]).length()
+            tmp = cylvol(HFF*bact.Markers[i], HFF*bact.Markers[i+1])
+#            print "cylvol: ", tmp, str(l)
+            accumVol += tmp
         accumVol += spvol
     
     return accumVol
@@ -153,7 +142,7 @@ def convert(pt, ds):
     
 
 def ellipsoidType(radius):
-    tol = 5
+    tol = 10
     equiv = lambda x,y: y-tol < x < y+tol
     
     if equiv(radius.x, radius.y) and equiv(radius.y, radius.z):
