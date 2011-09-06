@@ -3,6 +3,7 @@ Created on Jul 24, 2011
 
 @author: shareef
 '''
+from data.io import writeCSV
 from store import DataStore
 from vector import Vec3f
 import numpy as np
@@ -10,9 +11,10 @@ import scipy as s
 import scipy.stats as ss
 from collections import namedtuple
 
-import csv
-
 DescriptiveStats = namedtuple('DescriptiveStats', 'mean med std q1 q3')
+
+HFF = 2.86
+ds = Vec3f(0.1,0.1,0.56)
 
 def communityDistanceStats():
     """
@@ -22,16 +24,23 @@ def communityDistanceStats():
     for bact in DataStore.Bacteria():
         blen = len(bact.Markers)
         if blen == 1:
-            c = bact.Markers[0]
+            c = HFF*bact.Markers[0]*ds
         elif blen == 2:
-            c = bact.Markers[0].midpoint(bact.Markers[1])
+            p1 = HFF*bact.Markers[0]*ds
+            p2 = HFF*bact.Markers[1]*ds
+            c = p1.midpoint(p2)
+        else:
+            continue
         centers.append(c)
     
     dist = []
     for i in range(len(centers)-1):
         for j in range(i+1, len(centers)):
             dist.append((centers[i] - centers[j]).length())
+
     
+    writeCSV(np.vstack(dist), ['dist'], 'density.csv')
+
     return generateDescriptiveStats(dist)
 
 
@@ -82,12 +91,8 @@ def communityOrientationStats(angle=True):
             
             
     
-    data = np.hstack((np.array(dotprods).T, np.array(lengths)[:,np.newaxis]))
-    
-    with open('out.csv', 'w') as e:
-        writer = csv.writer(e, delimiter=',')
-        writer.writerow(['x','y','z','len'])
-        writer.writerows(data)
+#    data = np.hstack((np.array(angles).T, np.array(lengths)[:,np.newaxis]))
+    writeCSV(data, ['x','y','z','len'], 'olen.csv')
 
     if angle:
         return (generateDescriptiveStats(angles[0]),
@@ -95,7 +100,6 @@ def communityOrientationStats(angle=True):
                 generateDescriptiveStats(angles[2]))
     else:
         return bacilli, filaments, dotprods
-
 
     
 def generateDescriptiveStats(data):
