@@ -206,6 +206,16 @@ class IBCRenderPanel(wx.Panel):
         self.bacteriaLayer.AddStoredBacteria()
         self.renderer.Render()
         
+    def RenderStoredMarkers(self):
+        markers = list(DataStore.Markers())
+        DataStore.ClearMarkers()
+        
+        for marker in markers:
+            actor = self.bacteriaLayer.CreateMarker(marker)
+            DataStore.AddMarker(actor)
+            self.renderer.AddActor(actor)
+        self.renderer.Render()
+        
     def DeleteBacterium(self, idx=None):
         """
         Delete the recorded bacterium (internal and actor) 
