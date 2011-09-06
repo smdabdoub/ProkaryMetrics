@@ -133,6 +133,12 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnColorByOrientation, id=ID_BGR)
         
         # back to the tools menu items
+        #   stats
+        toolsCalcCommDensity = wx.MenuItem(toolsMenu, wx.NewId(), "Calculate Community Distance Stats",
+                                     "Calculate descriptive statistics for the distance between bacteria.")
+        toolsMenu.AppendItem(toolsCalcCommDensity)
+        self.Bind(wx.EVT_MENU, self.OnCalcCommDensity, id=toolsCalcCommDensity.GetId())
+        
         toolsScreenshot = wx.MenuItem(toolsMenu, wx.NewId(), 'Take Screenshot',
                                       """Saves the contents of the display \
                                       window to an image file""")
@@ -305,8 +311,9 @@ class MainWindow(wx.Frame):
             for id in DataStore.ImageSets():
                 self.pnlIBCRender.RenderImageData(id, imgReader)
             
-            # render recorded bacteria
+            # render recorded items
             self.pnlIBCRender.RenderStoredBacteria()
+            self.pnlIBCRender.RenderStoredMarkers()
             
             self.pnlActions.UpdateBacteriaCount()
             
@@ -361,6 +368,9 @@ class MainWindow(wx.Frame):
             
         self.pnlIBCRender.ColorByOrientation(scheme)
         
+    def OnCalcCommDensity(self, event):
+        self.pnlIBCRender.CalculateCommunityDensity()    
+    
     def TakeScreenshot(self, event):
         fmts = export.exportClasses.keys()
         dlg = wx.FileDialog(self, "Take Screenshot", "", "", 
