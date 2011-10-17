@@ -110,7 +110,7 @@ class BacteriaLayer(RenderLayer):
 
     def CreateMarker(self, loc):
         """
-        :@type loc: tuple
+        :@type loc: Vec3f
         :@param loc: The 3D location of the marker.
         """
         sphere = vtk.vtkSphereSource()
