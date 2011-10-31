@@ -18,8 +18,10 @@ class IBCRenderer(ImageRenderer):
         self.renwin_update_callback = renwin_update_callback
         self.color = None
         self.volumeReader = None
-        self.isocontourLevel = [20000,20000]
-        self.dataSpacing = (0.1, 0.1, 0.56)
+#        self.isocontourLevel = [20000,20000]
+        self.isocontourLevel = [255,255]
+#        self.dataSpacing = (0.1, 0.1, 0.56)
+        self.dataSpacing = (1.0, 1.0, 1.0)
         self.visible = True
         
     @property
@@ -82,6 +84,7 @@ class IBCRenderer(ImageRenderer):
         # VOI Extractor
         self.voi = vtk.vtkExtractVOI()
         self.voi.SetInputConnection(self.gaussFilter.GetOutputPort())
+#        self.voi.SetInputConnection(self.vtkReader.GetOutputPort())
         self.voi.SetVOI(self.volumeReader.VolumeExtents)
         
         # Surface rendering

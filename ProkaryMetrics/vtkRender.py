@@ -268,7 +268,7 @@ class IBCRenderPanel(wx.Panel):
             self.ao(str(s))
             
     def ColorByOrientation(self, colorScheme=None):
-        bacilli, filaments, dotprods = communityOrientationStats(angle=False)
+        bacilli, filaments, dotprods = communityOrientationStats()
         dotprods = [map(abs, dotprods[i]) for i in range(3)]
         
         if colorScheme is None:
@@ -284,16 +284,27 @@ class IBCRenderPanel(wx.Panel):
                 actor.GetProperty().SetDiffuseColor(dotprods[colorScheme.x][i], 
                                                     dotprods[colorScheme.y][i], 
                                                     dotprods[colorScheme.z][i])
-#        for j, a in enumerate(filaments):
-#            aColl = vtk.vtkPropCollection()
-#            a.GetActors(aColl)
-#            aColl.InitTraversal()
-#            actors = [aColl.GetNextProp() for _ in range(aColl.GetNumberOfItems())]
-#            
-#            self.setColor(actors[0], i+j, dotprods, colorScheme)
-#            for k in range(1, len(actors)-1):
-#                self.setColor(actors[k], i+j+k, dotprods, colorScheme)
-#            self.setColor(actors[-1], i+j+k, dotprods, colorScheme)
+        for j, fID in enumerate(filaments):
+            fMarkers = DataStore.Bacteria()[fID].Markers
+            fColl = vtk.vtkPropCollection()
+            DataStore.BacteriaActors()[fID].GetActors(fColl)
+            fColl.InitTraversal()
+            factors = [fColl.GetNextProp() for _ in range(fColl.GetNumberOfItems())]
+            
+            # Set color LUT for filament spline based on marker positions
+            colorTransferFunction = vtk.vtkColorTransferFunction()
+            for k in range(0, len(fMarkers)):
+                colorTransferFunction.AddRGBPoint(k,dotprods[colorScheme.x][i+j+k],
+                                                    dotprods[colorScheme.y][i+j+k],
+                                                    dotprods[colorScheme.z][i+j+k])
+            # filament spline
+            factors[1].GetMapper().ScalarVisibilityOn()
+            factors[1].GetMapper().SetInterpolateScalarsBeforeMapping(1)
+            factors[1].GetMapper().SetLookupTable(colorTransferFunction)
+            
+            # sphere caps
+            self.setColor(factors[0], i+j, dotprods, colorScheme)
+            self.setColor(factors[-1], i+j+k, dotprods, colorScheme)
             
 
         self.iren.Render()
@@ -302,9 +313,6 @@ class IBCRenderPanel(wx.Panel):
         actor.GetProperty().SetDiffuseColor(dots[cs.x][idx], 
                                             dots[cs.y][idx], 
                                             dots[cs.z][idx])
-        actor.GetProperty().SetSpecularColor(1, 0.84, 0)
-        actor.GetProperty().SetSpecularPower(5.0)
-        actor.GetProperty().SetOpacity(0.9)
     
 
     def CalculateCommunityDensity(self):
