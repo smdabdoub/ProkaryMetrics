@@ -61,6 +61,7 @@ class Color(object):
 WhiteColor = Color((1.0, 1.0, 1.0))
 IBCColor = Color((0, 0.76, 0.063))
 BacteriaColor = Color((1.0, 0.57, 0))
+MarkerColor = Color((1.0, 0.0, 0.0))
     
 
 def createEllipsoid(radius, center):
