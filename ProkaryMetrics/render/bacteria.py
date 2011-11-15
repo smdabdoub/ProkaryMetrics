@@ -7,7 +7,7 @@ This module contains a set of classes for rendering and storing settings
 related to user-created bacteria.
 '''
 from data.objects import Bacterium
-from data.util import CopyMatrix4x4, StoreAsMatrix4x4
+#from data.util import CopyMatrix4x4, StoreAsMatrix4x4
 from render.basic import (Color, RenderLayer, BacteriaColor, boolInt, generateSpline)
 from store import DataStore
 from vector import Vec3f
@@ -25,6 +25,7 @@ class BacteriaLayer(RenderLayer):
         self.renderer = renderer
         self.renwin_update_callback = renwin_update_callback
         self.color = color
+        self.markerColor = MarkerColor
         self.actor_radius = 0.5
         self.visible = True
 
@@ -124,7 +125,9 @@ class BacteriaLayer(RenderLayer):
         sphereMapper.SetInput(sphere.GetOutput())
         sphereActor = vtk.vtkActor()
         sphereActor.SetMapper(sphereMapper)
-        sphereActor.GetProperty().SetDiffuseColor(self.color.r, self.color.g, self.color.b)
+        sphereActor.GetProperty().SetDiffuseColor(self.markerColor.r, 
+                                                  self.markerColor.g, 
+                                                  self.markerColor.b)
         sphereActor.SetVisibility(boolInt(self.visible))
         
         return sphereActor
@@ -164,30 +167,30 @@ class BacteriaLayer(RenderLayer):
             DataStore.AddBacteriumActor(bacterium)
             self.renderer.AddActor(bacterium)
             
-    def CaptureTransforms(self):
-        """
-        Copy the transform matrices for all user-placed actors.
-        """
-        markersM = []
-        bactsM = []
-        
-        for marker in DataStore.Markers():
-            markersM.append(CopyMatrix4x4(marker.GetMatrix))
-            
-        for bact in DataStore.BacteriaActors():
-            bactsM.append(CopyMatrix4x4(bact.GetMatrix))
-            
-        return markersM, bactsM
-    
-    def ApplyTransforms(self, markersM, bactsM):
-        """
-        Apply previously captured transform matrices.
-        """
-        for i, marker in DataStore.Markers():
-            marker.SetUserMatrix(StoreAsMatrix4x4(markersM[i]))
-        
-        for i, bact in DataStore.BacteriaActors():
-            bact.SetUserMatrix(StoreAsMatrix4x4(bactsM[i]))
+#    def CaptureTransforms(self):
+#        """
+#        Copy the transform matrices for all user-placed actors.
+#        """
+#        markersM = []
+#        bactsM = []
+#        
+#        for marker in DataStore.Markers():
+#            markersM.append(CopyMatrix4x4(marker.GetMatrix))
+#            
+#        for bact in DataStore.BacteriaActors():
+#            bactsM.append(CopyMatrix4x4(bact.GetMatrix))
+#            
+#        return markersM, bactsM
+#    
+#    def ApplyTransforms(self, markersM, bactsM):
+#        """
+#        Apply previously captured transform matrices.
+#        """
+#        for i, marker in DataStore.Markers():
+#            marker.SetUserMatrix(StoreAsMatrix4x4(markersM[i]))
+#        
+#        for i, bact in DataStore.BacteriaActors():
+#            bact.SetUserMatrix(StoreAsMatrix4x4(bactsM[i]))
     
     
     def _createBacterium(self, markers):
