@@ -4,6 +4,7 @@ Created on Jan 6, 2011
 @author: shareef
 '''
 from store import DataStore
+from vector import Vec3f
 import wx
 import vtk
 
@@ -144,3 +145,35 @@ class ImageRenderer(object):
 
 
 
+def generateSpline(markers):
+    aSplineX = vtk.vtkCardinalSpline()
+    aSplineY = vtk.vtkCardinalSpline()
+    aSplineZ = vtk.vtkCardinalSpline()
+    
+    for i, marker in enumerate(markers):
+        center = Vec3f(marker.GetCenter()) if not isinstance(marker, Vec3f) else marker
+        aSplineX.AddPoint(i, center.x)
+        aSplineY.AddPoint(i, center.y)
+        aSplineZ.AddPoint(i, center.z)
+    
+    # Generate the polyline for the spline.
+    points = vtk.vtkPoints()
+    scalars = vtk.vtkFloatArray()
+    
+    # Number of points on the spline
+    splineRes = len(markers)*1
+    
+    # Interpolate x, y and z by using the three spline filters and
+    # create new points
+    splineList = []
+    for i in range(splineRes):
+        t = (len(markers)-1.0)/(splineRes-1.0)*i
+        splineList.append((aSplineX.Evaluate(t), aSplineY.Evaluate(t),
+                           aSplineZ.Evaluate(t)))
+        points.InsertPoint(i, splineList[-1][0], splineList[-1][1],
+                           splineList[-1][2])
+        scalars.InsertTuple1(i,t)
+        
+    return points, scalars, t, splineList
+        
+    

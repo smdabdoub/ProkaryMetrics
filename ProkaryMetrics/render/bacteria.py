@@ -8,7 +8,7 @@ related to user-created bacteria.
 '''
 from data.objects import Bacterium
 from data.util import CopyMatrix4x4, StoreAsMatrix4x4
-from render.basic import (Color, RenderLayer, BacteriaColor, boolInt)
+from render.basic import (Color, RenderLayer, BacteriaColor, boolInt, generateSpline)
 from store import DataStore
 from vector import Vec3f
 
@@ -108,14 +108,16 @@ class BacteriaLayer(RenderLayer):
         self.renwin_update_callback()
         
 
-    def CreateMarker(self, loc):
+    def CreateMarker(self, loc, radius=None):
         """
         :@type loc: Vec3f
         :@param loc: The 3D location of the marker.
         """
+        if radius is None:
+            radius = self.actor_radius
         sphere = vtk.vtkSphereSource()
         sphere.SetCenter(loc.x, loc.y, loc.z)
-        sphere.SetRadius(self.actor_radius)
+        sphere.SetRadius(radius)
         sphere.SetPhiResolution(20)
         sphere.SetThetaResolution(20)
         sphereMapper = vtk.vtkPolyDataMapper()
@@ -255,49 +257,30 @@ class BacteriaLayer(RenderLayer):
         return filament
     
     def _createFilamentSpline(self, markers):
-        aSplineX = vtk.vtkCardinalSpline()
-        aSplineY = vtk.vtkCardinalSpline()
-        aSplineZ = vtk.vtkCardinalSpline()
-        
-        inputPoints = vtk.vtkPoints()
-        for i, marker in enumerate(markers):
-            center = Vec3f(marker.GetCenter())
-            aSplineX.AddPoint(i, center.x)
-            aSplineY.AddPoint(i, center.y)
-            aSplineZ.AddPoint(i, center.z)
-            inputPoints.InsertPoint(i, center.x, center.y, center.z)
-        
-        # Generate the polyline for the spline.
-        points = vtk.vtkPoints()
         profileData = vtk.vtkPolyData()
-        
-        # Number of points on the spline
-        numberOfOutputPoints = len(markers)*10
-        
-        # Interpolate x, y and z by using the three spline filters and
-        # create new points
-        for i in range(numberOfOutputPoints):
-            t = (len(markers)-1.0)/(numberOfOutputPoints-1.0)*i
-            points.InsertPoint(i, aSplineX.Evaluate(t), aSplineY.Evaluate(t),
-                               aSplineZ.Evaluate(t))
+        points, scalars, t, sList = generateSpline(markers)
+        fradius = self.actor_radius * 1.5
         
         # Create the polyline.
         lines = vtk.vtkCellArray()
-        lines.InsertNextCell(numberOfOutputPoints)
-        for i in range(numberOfOutputPoints):
+        lines.InsertNextCell(len(sList))
+        for i in range(len(sList)):
             lines.InsertCellPoint(i)
          
         profileData.SetPoints(points)
         profileData.SetLines(lines)
+        profileData.GetPointData().SetScalars(scalars)
         
         # Add thickness to the resulting line.
         profileTubes = vtk.vtkTubeFilter()
         profileTubes.SetNumberOfSides(20)
         profileTubes.SetInput(profileData)
-        profileTubes.SetRadius(self.actor_radius)
+        profileTubes.SetRadius(fradius)
             
         profileMapper = vtk.vtkPolyDataMapper()
         profileMapper.SetInput(profileTubes.GetOutput())
+        profileMapper.SetScalarRange(0,t)
+        profileMapper.ScalarVisibilityOff()
         
         profile = vtk.vtkActor()
         profile.SetMapper(profileMapper)
@@ -310,9 +293,9 @@ class BacteriaLayer(RenderLayer):
     
         # Add capping spheres
         filament = vtk.vtkAssembly()
-        filament.AddPart(markers[0])
+        filament.AddPart(self.CreateMarker(Vec3f(markers[0].GetCenter()), fradius))
         filament.AddPart(profile)
-        filament.AddPart(markers[-1])
+        filament.AddPart(self.CreateMarker(Vec3f(markers[-1].GetCenter()), fradius))
         
         return filament
     

@@ -268,8 +268,9 @@ class IBCRenderPanel(wx.Panel):
             self.ao(str(s))
             
     def ColorByOrientation(self, colorScheme=None):
-        bacilli, filaments, dotprods = communityOrientationStats()
-        dotprods = [map(abs, dotprods[i]) for i in range(3)]
+        bacilli, filaments, bdots, fdots, sRes = communityOrientationStats()
+        bdots = [map(abs, bdots[i]) for i in range(3)]
+        fdots = [map(abs, fdots[i]) for i in range(3)]
         
         if colorScheme is None:
             colorScheme = Vec3f(2,1,0)
@@ -281,11 +282,10 @@ class IBCRenderPanel(wx.Panel):
             actors = [aColl.GetNextProp() for _ in range(aColl.GetNumberOfItems())]
             
             for actor in actors:
-                actor.GetProperty().SetDiffuseColor(dotprods[colorScheme.x][i], 
-                                                    dotprods[colorScheme.y][i], 
-                                                    dotprods[colorScheme.z][i])
+                actor.GetProperty().SetDiffuseColor(bdots[colorScheme.x][i], 
+                                                    bdots[colorScheme.y][i], 
+                                                    bdots[colorScheme.z][i])
         for j, fID in enumerate(filaments):
-            fMarkers = DataStore.Bacteria()[fID].Markers
             fColl = vtk.vtkPropCollection()
             DataStore.BacteriaActors()[fID].GetActors(fColl)
             fColl.InitTraversal()
@@ -293,18 +293,22 @@ class IBCRenderPanel(wx.Panel):
             
             # Set color LUT for filament spline based on marker positions
             colorTransferFunction = vtk.vtkColorTransferFunction()
-            for k in range(0, len(fMarkers)):
-                colorTransferFunction.AddRGBPoint(k,dotprods[colorScheme.x][i+j+k],
-                                                    dotprods[colorScheme.y][i+j+k],
-                                                    dotprods[colorScheme.z][i+j+k])
+            
+            fdotIdx = sum(sRes[:j])
+            for k in range(0, sRes[j]):
+                colorTransferFunction.AddRGBPoint(k,fdots[colorScheme.x][fdotIdx+k],
+                                                    fdots[colorScheme.y][fdotIdx+k],
+                                                    fdots[colorScheme.z][fdotIdx+k])
+#                print 'RGB:',fdots[colorScheme.x][fdotIdx+k],fdots[colorScheme.y][fdotIdx+k],fdots[colorScheme.z][fdotIdx+k]
             # filament spline
-            factors[1].GetMapper().ScalarVisibilityOn()
-            factors[1].GetMapper().SetInterpolateScalarsBeforeMapping(1)
             factors[1].GetMapper().SetLookupTable(colorTransferFunction)
+            factors[1].GetMapper().ScalarVisibilityOn()
+            factors[1].GetMapper().SetColorModeToMapScalars()
+            factors[1].GetMapper().InterpolateScalarsBeforeMappingOff()
             
             # sphere caps
-            self.setColor(factors[0], i+j, dotprods, colorScheme)
-            self.setColor(factors[-1], i+j+k, dotprods, colorScheme)
+            self.setColor(factors[0], fdotIdx, fdots, colorScheme)
+            self.setColor(factors[-1], fdotIdx+k, fdots, colorScheme)
             
 
         self.iren.Render()

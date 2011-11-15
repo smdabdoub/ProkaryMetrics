@@ -4,6 +4,7 @@ Created on Jul 24, 2011
 @author: shareef
 '''
 from data.io import writeCSV
+from render.basic import generateSpline
 from store import DataStore
 from vector import Vec3f
 import numpy as np
@@ -52,7 +53,9 @@ def communityOrientationStats():
     :@rtype: tuple
     :@return: 
     """
-    dotprods = [[],[],[]]
+    bdots = [[],[],[]]
+    fdots = [[],[],[]]
+    sRes = []
     bacilli = []
     filaments = []
     lengths = []
@@ -67,25 +70,28 @@ def communityOrientationStats():
             v = bact.Markers[0] - bact.Markers[1]
             lengths.append(v.length())
             v.normalize()
-            dotprods[0].append(xbasis.dot(v))
-            dotprods[1].append(ybasis.dot(v))
-            dotprods[2].append(zbasis.dot(v))
+            bdots[0].append(xbasis.dot(v))
+            bdots[1].append(ybasis.dot(v))
+            bdots[2].append(zbasis.dot(v))
         # calculate filament orientations b/t each two markers
         if blen > 2:
             filaments.append(i)
-            for j in range(blen-1):
-                v = bact.Markers[j] - bact.Markers[j+1]
+            _, _, _, splinePoints = generateSpline(bact.Markers)
+            sRes.append(len(splinePoints) - 1)  # -1 b/c we're using every pair, not every point
+            sMarkers = [Vec3f(point) for point in splinePoints]
+            for j in range(len(sMarkers)-1):
+                v = sMarkers[j] - sMarkers[j+1]
                 v.normalize()
-                dotprods[0].append(xbasis.dot(v))
-                dotprods[1].append(ybasis.dot(v))
-                dotprods[2].append(zbasis.dot(v))
+                fdots[0].append(xbasis.dot(v))
+                fdots[1].append(ybasis.dot(v))
+                fdots[2].append(zbasis.dot(v))
             
             
     
 #    data = np.hstack((np.array(angles).T, np.array(lengths)[:,np.newaxis]))
 #    writeCSV(data, ['x','y','z','len'], 'olen.csv')
 
-    return bacilli, filaments, dotprods
+    return bacilli, filaments, bdots, fdots, sRes
 
     
 def generateDescriptiveStats(data):
