@@ -3,7 +3,7 @@ Created on Dec 28, 2010
 
 @author: Shareef Dabdoub
 '''
-from data.util import StoreAsMatrix4x4
+#from data.util import StoreAsMatrix4x4
 from render.basic import (Color, ImageRenderer, boolInt)
 from store import DataStore
 
@@ -18,10 +18,8 @@ class IBCRenderer(ImageRenderer):
         self.renwin_update_callback = renwin_update_callback
         self.color = None
         self.volumeReader = None
-#        self.isocontourLevel = [20000,20000]
-        self.isocontourLevel = [255,255]
-#        self.dataSpacing = (0.1, 0.1, 0.56)
-        self.dataSpacing = (1.0, 1.0, 1.0)
+        self.dataSpacing = (0.1, 0.1, 0.56)
+        self.isocontourLevel = [20000,20000]
         self.visible = True
         
     @property
@@ -247,13 +245,13 @@ class IBCRenderer(ImageRenderer):
             if sliceRange[0] > sliceRange[1]:
                 self.volumeReader.sliceRange = [sliceRange[1], sliceRange[0]]
     
-    @property
-    def TransformMatrix(self):
-        return self.ibcActor.GetMatrix()
-    
-    @TransformMatrix.setter
-    def TransformMatrix(self, matrix):
-        self.ibcActor.SetUserMatrix(StoreAsMatrix4x4(matrix))
+#    @property
+#    def TransformMatrix(self):
+#        return self.ibcActor.GetMatrix()
+#    
+#    @TransformMatrix.setter
+#    def TransformMatrix(self, matrix):
+#        self.ibcActor.SetUserMatrix(StoreAsMatrix4x4(matrix))
     
 
 import os.path as osp
