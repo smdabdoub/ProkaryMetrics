@@ -5,11 +5,12 @@ Created on Jun 24, 2011
 
 Export image data to disk
 '''
+from collections import OrderedDict
 import vtk
 
-exportClasses = {'png': vtk.vtkPNGWriter, 'jpg': vtk.vtkJPEGWriter, 
-                 'tiff': vtk.vtkTIFFWriter, 'pnm': vtk.vtkPNMWriter, 
-                 'ps':  vtk.vtkPostScriptWriter, 'bmp': vtk.vtkBMPWriter}
+exportClasses = OrderedDict([('png', vtk.vtkPNGWriter), ('jpg', vtk.vtkJPEGWriter), 
+                            ('tiff', vtk.vtkTIFFWriter), ('pnm', vtk.vtkPNMWriter),
+                            ('ps', vtk.vtkPostScriptWriter), ('bmp', vtk.vtkBMPWriter)])
 
 exportFormats = '|'.join(['PNG (*.png)|*.png', 'JPG (*.JPG)|*.jpg', 
                           'TIFF (*.tiff)|*.tiff', 'PNM (*.pnm)|*.pnm', 
