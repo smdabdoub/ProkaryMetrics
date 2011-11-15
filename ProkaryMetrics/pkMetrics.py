@@ -55,6 +55,7 @@ class MainWindow(wx.Frame):
                                                  ao=self.AppendOutput)
         self.pnlActions =  RenderActionsPanel(self, self.pnlIBCRender, 
                                               status_callback=self.setMainStatus)
+        self.pnlIBCRender.updateCount = self.pnlActions.UpdateBacteriaCount()
         
         self.txtOutput = wx.TextCtrl(self, style=wx.TE_READONLY|wx.TE_MULTILINE)
         self.txtOutput.Hide()
