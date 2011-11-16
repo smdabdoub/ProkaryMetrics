@@ -8,7 +8,7 @@ related to user-created bacteria.
 '''
 from data.objects import Bacterium
 #from data.util import CopyMatrix4x4, StoreAsMatrix4x4
-from render.basic import (Color, RenderLayer, BacteriaColor, boolInt, generateSpline)
+from render.basic import (Color, RenderLayer, BacteriaColor, MarkerColor, boolInt, generateSpline)
 from store import DataStore
 from vector import Vec3f
 

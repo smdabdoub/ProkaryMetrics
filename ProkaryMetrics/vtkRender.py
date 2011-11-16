@@ -40,6 +40,7 @@ class IBCRenderPanel(wx.Panel):
         self.setPickerPos = ppos_callback
         
         self.ao = ao
+        self.aa = False
         
 
         self.vtkWidget = wxVTKRenderWindowInteractor(self, wx.ID_ANY)
@@ -408,6 +409,13 @@ class IBCRenderPanel(wx.Panel):
             self.OnDeleteRequest()
         elif key == 'C':
             self.switchCameras()
+        elif key == 'A':
+            if self.aa:
+                self.aa = False
+                self.iren.GetRenderWindow().SetAAFrames(0)
+            else:
+                self.aa = True
+                self.iren.GetRenderWindow().SetAAFrames(16)
             
     
     def switchCameras(self):
