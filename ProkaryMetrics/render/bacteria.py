@@ -109,13 +109,15 @@ class BacteriaLayer(RenderLayer):
         self.renwin_update_callback()
         
 
-    def CreateMarker(self, loc, radius=None):
+    def CreateMarker(self, loc, radius=None, color=None):
         """
         :@type loc: Vec3f
         :@param loc: The 3D location of the marker.
         """
         if radius is None:
             radius = self.actor_radius
+        if color is None:
+            color = self.markerColor
         sphere = vtk.vtkSphereSource()
         sphere.SetCenter(loc.x, loc.y, loc.z)
         sphere.SetRadius(radius)
@@ -125,9 +127,7 @@ class BacteriaLayer(RenderLayer):
         sphereMapper.SetInput(sphere.GetOutput())
         sphereActor = vtk.vtkActor()
         sphereActor.SetMapper(sphereMapper)
-        sphereActor.GetProperty().SetDiffuseColor(self.markerColor.r, 
-                                                  self.markerColor.g, 
-                                                  self.markerColor.b)
+        sphereActor.GetProperty().SetDiffuseColor(color.r, color.g, color.b)
         sphereActor.SetVisibility(boolInt(self.visible))
         
         return sphereActor
