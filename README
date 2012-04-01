@@ -21,7 +21,9 @@ for Academic users) which can be found at:
 
 http://enthought.com/products/epd.php
 
-The current version (7.1) is sufficient to run ProkaryMetrics.
+The current version (7.2) would be best to for running ProkaryMetrics, 
+but you will need at least the 7.0 release of the EPD due to the requirement 
+of Python 2.7.
 
 In the near future, I hope to provide a self-contained app package for Mac/Win 
 that will not require any installations.
