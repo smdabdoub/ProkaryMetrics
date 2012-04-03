@@ -1,5 +1,5 @@
 ProkaryMetrics (v0.3.1)
----------------------
+=======================
 This software is designed to enable basic 3D visualization of 8/16-bit B&W 
 2D stacks of microscopy data, as well as allow users to manually designate the
 location of bacteria within the image data. Currently the software also 
@@ -12,9 +12,9 @@ Requirements
 The software is written in Python (2.7) and requires (minimum version) the 
 following libraries:
 
-VTK (5.6)
-wxPython (2.8.10)
-PIL (1.1.7)
+* VTK (5.6)
+* wxPython (2.8.10)
+* PIL (1.1.7)
 
 The simplest means to getting the appropriate Python environment with the 
 appropriate libraries is to install the Enthought Python Distribution (free 
@@ -40,7 +40,7 @@ $> python pkMetrics.py
 This command will launch the program, and everything else is done through 
 interacting with the GUI.
 
----
+- - -
 Version 0.3.1 of ProkaryMetrics is released under the GPLv3.
 
 Please address any comments or questions to:
