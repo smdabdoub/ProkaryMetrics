@@ -35,7 +35,7 @@ Once you have the appropriate Python environment and libraries installed, use
 a console to navigate to the ProkaryMetrics folder contained with this file in 
 the downloaded archive and type:
 
-$> python pkMetrics.py
+> $> python pkMetrics.py
 
 This command will launch the program, and everything else is done through 
 interacting with the GUI.
