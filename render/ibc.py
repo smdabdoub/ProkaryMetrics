@@ -16,6 +16,7 @@ class IBCRenderer(ImageRenderer):
         ImageRenderer.__init__(self)
         self.renderer = renderer
         self.renwin_update_callback = renwin_update_callback
+        self.name = ""
         self.color = None
         self.volumeReader = None
         self.dataSpacing = (0.1, 0.1, 0.56)
@@ -26,10 +27,11 @@ class IBCRenderer(ImageRenderer):
     def Settings(self):
         s = {}
         s['ImageSetID'] = self.imageSetID
+        s['Name'] = self.name
         s['DataSpacing'] = self.dataSpacing
         s['Color'] = self.color
         s['SliceRange'] = self.volumeReader.sliceRange
-        s['PixelExtents'] = self.volumeReader.pixelExtents
+        #s['PixelExtents'] = self.volumeReader.pixelExtents
         s['IsocontourLevel'] = self.isocontourLevel
         s['Visible'] = self.visible
         
@@ -38,6 +40,7 @@ class IBCRenderer(ImageRenderer):
     @Settings.setter
     def Settings(self, s):
         self.imageSetID = s['ImageSetID']
+        self.name = s['name'] if 'name' in s else ''
         self.color = s['Color']
         
         if 'DataSpacing' in s:
@@ -50,7 +53,7 @@ class IBCRenderer(ImageRenderer):
         
         if self.volumeReader is not None:
             self.volumeReader.sliceRange = s['SliceRange']
-            self.volumeReader.pixelExtents = s['PixelExtents']
+            #self.volumeReader.pixelExtents = s['PixelExtents']
             
         if 'Visible' in s:
             self.visible = s['Visible']
@@ -167,8 +170,8 @@ class IBCRenderer(ImageRenderer):
         """
         if sliceRange is not None:
             self.SliceRange = sliceRange
-        if pixelExtents is not None:
-            self.volumeReader.pixelExtents = pixelExtents
+#        if pixelExtents is not None:
+#            self.volumeReader.pixelExtents = pixelExtents
         
         self.voi.SetVOI(self.volumeReader.VolumeExtents)
         self.voi.Update()
@@ -196,14 +199,19 @@ class IBCRenderer(ImageRenderer):
         self.renwin_update_callback()
         
     def UpdateColor(self, color):
+        self.color = color
         self.ibcActor.GetProperty().SetDiffuseColor(color.r, color.g, color.b)
         self.ibcActor.ApplyProperties()
         self.renwin_update_callback()
         
     
     def UpdateVisibility(self, visible):
+        self.visible = visible
         self.ibcActor.SetVisibility(boolInt(visible))
         self.renwin_update_callback()
+        
+    def UpdateName(self, name):
+        self.name = name
         
     
     # Properties
@@ -292,24 +300,24 @@ class IBCSettingsDialog(wx.Dialog):
         sizer.Add(self.txtSliceUpper)
         
         # isocontour value
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Isocontour Value:"))
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Pixel Intensity:"))
         self.txtIsocontour = wx.TextCtrl(self, wx.ID_ANY, "")
         sizer.Add(self.txtIsocontour)
         sizer.AddSpacer(5)
         
         # pixel extents
         # X
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Pixel Extents (X):"))
-        self.txtXPixelExtLower = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.txtXPixelExtUpper = wx.TextCtrl(self, wx.ID_ANY, "")
-        sizer.Add(self.txtXPixelExtLower)
-        sizer.Add(self.txtXPixelExtUpper)
+#        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Pixel Extents (X):"))
+#        self.txtXPixelExtLower = wx.TextCtrl(self, wx.ID_ANY, "")
+#        self.txtXPixelExtUpper = wx.TextCtrl(self, wx.ID_ANY, "")
+#        sizer.Add(self.txtXPixelExtLower)
+#        sizer.Add(self.txtXPixelExtUpper)
         # Y
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Pixel Extents (Y):"))
-        self.txtYPixelExtLower = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.txtYPixelExtUpper = wx.TextCtrl(self, wx.ID_ANY, "")
-        sizer.Add(self.txtYPixelExtLower)
-        sizer.Add(self.txtYPixelExtUpper)
+#        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Pixel Extents (Y):"))
+#        self.txtYPixelExtLower = wx.TextCtrl(self, wx.ID_ANY, "")
+#        self.txtYPixelExtUpper = wx.TextCtrl(self, wx.ID_ANY, "")
+#        sizer.Add(self.txtYPixelExtLower)
+#        sizer.Add(self.txtYPixelExtUpper)
         
         # color picker
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "Color:"))
@@ -326,13 +334,13 @@ class IBCSettingsDialog(wx.Dialog):
         self.cmdUpdate = wx.Button(self, wx.NewId(), "Update")
         self.Bind(wx.EVT_BUTTON, self._cmdUpdate_click, id=self.cmdUpdate.Id)
         
-        lblInfoSizer = wx.BoxSizer(wx.HORIZONTAL)
-        lblInfoSizer.Add(wx.StaticText(self, wx.ID_ANY, "Loaded image set: "))
-        self.lblImageSet = wx.StaticText(self, wx.ID_ANY, "None")
-        lblInfoSizer.Add(self.lblImageSet)
+        infoSizer = wx.BoxSizer(wx.HORIZONTAL)
+        infoSizer.Add(wx.StaticText(self, wx.ID_ANY, "Loaded image set: "))
+        self.txtImageSetName = wx.TextCtrl(self, wx.ID_ANY, "")
+        infoSizer.Add(self.txtImageSetName)
         
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(lblInfoSizer, 0, wx.TOP | wx.LEFT | wx.RIGHT, 10)
+        self.Sizer.Add(infoSizer, 0, wx.TOP | wx.LEFT | wx.RIGHT, 10)
         self.Sizer.Add(sizer, 1, wx.EXPAND | wx.LEFT | wx.TOP | wx.BOTTOM | wx.RIGHT, 10)
         self.Sizer.Add(self.cmdUpdate, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 10)
         
@@ -342,6 +350,10 @@ class IBCSettingsDialog(wx.Dialog):
     #TODO: value sanity checking
     def _cmdUpdate_click(self, events):
         s = self.settings
+        
+        # name
+        if self.txtImageSetName.Value != s['Name']:
+            self._UpdateName(self.txtImageSetName.Value)
         
         # data spacing
         if self.txtSpacingX.Value != str(s['DataSpacing'][0]) or \
@@ -365,12 +377,12 @@ class IBCSettingsDialog(wx.Dialog):
             self._UpdateIsocontourLevel(isovals)
         
         # pixel extents
-        if self.txtXPixelExtLower.Value != str(s['PixelExtents'][0]) or \
-           self.txtXPixelExtUpper.Value != str(s['PixelExtents'][1]) or \
-           self.txtYPixelExtLower.Value != str(s['PixelExtents'][2]) or \
-           self.txtYPixelExtUpper.Value != str(s['PixelExtents'][3]):
-            print 'Updating pixel extents'
-            self._UpdatePixelExtents()
+#        if self.txtXPixelExtLower.Value != str(s['PixelExtents'][0]) or \
+#           self.txtXPixelExtUpper.Value != str(s['PixelExtents'][1]) or \
+#           self.txtYPixelExtLower.Value != str(s['PixelExtents'][2]) or \
+#           self.txtYPixelExtUpper.Value != str(s['PixelExtents'][3]):
+#            print 'Updating pixel extents'
+#            self._UpdatePixelExtents()
         
         color = Color.fromWX(self.btnColor.GetColour().Get())
         if color != s['Color']:
@@ -401,14 +413,17 @@ class IBCSettingsDialog(wx.Dialog):
         self.settings['IsocontourLevel'] = isovals
         self.ibcRenderer.UpdateIsocontour(isovals)
         
-    def _UpdatePixelExtents(self):
-        pe = (int(self.txtXPixelExtLower.Value), int(self.txtXPixelExtUpper.Value), 
-              int(self.txtYPixelExtLower.Value), int(self.txtYPixelExtUpper.Value))
-        self.settings['PixelExtents'] = pe
-        self.ibcRenderer.UpdateImageDataExtent(pixelExtents=pe)
+#    def _UpdatePixelExtents(self):
+#        pe = (int(self.txtXPixelExtLower.Value), int(self.txtXPixelExtUpper.Value), 
+#              int(self.txtYPixelExtLower.Value), int(self.txtYPixelExtUpper.Value))
+#        self.settings['PixelExtents'] = pe
+#        self.ibcRenderer.UpdateImageDataExtent(pixelExtents=pe)
         
     def _UpdateColor(self, color):
         self.ibcRenderer.UpdateColor(color)
+    
+    def _UpdateName(self, name):
+        self.ibcRenderer.UpdateName(name)
 
     def _RetrieveSettings(self):
         """
@@ -416,17 +431,20 @@ class IBCSettingsDialog(wx.Dialog):
         """
         s = self.ibcRenderer.Settings
         paths = DataStore.GetImageSet(self.ibcRenderer.ImageSetID).filepaths
-        self.lblImageSet.Label = osp.split(osp.commonprefix(paths))[1] + '*'
+        if s['Name'] == '':
+            self.txtImageSetName.Value = osp.split(osp.commonprefix(paths))[1] + '*'
+        else:
+            self.txtImageSetName.Value = s['Name']
         self.txtSpacingX.Value = str(s['DataSpacing'][0])
         self.txtSpacingY.Value = str(s['DataSpacing'][1])
         self.txtSpacingZ.Value = str(s['DataSpacing'][2])
         self.lblImageSetSlices.Label = str(s['SliceRange'][1] - s['SliceRange'][0])
         self.txtSliceLower.Value = str(s['SliceRange'][0])
         self.txtSliceUpper.Value = str(s['SliceRange'][1])
-        self.txtXPixelExtLower.Value = str(s['PixelExtents'][0])
-        self.txtXPixelExtUpper.Value = str(s['PixelExtents'][1])
-        self.txtYPixelExtLower.Value = str(s['PixelExtents'][2])
-        self.txtYPixelExtUpper.Value = str(s['PixelExtents'][3])
+#        self.txtXPixelExtLower.Value = str(s['PixelExtents'][0])
+#        self.txtXPixelExtUpper.Value = str(s['PixelExtents'][1])
+#        self.txtYPixelExtLower.Value = str(s['PixelExtents'][2])
+#        self.txtYPixelExtUpper.Value = str(s['PixelExtents'][3])
         self.btnColor.SetColour(s['Color'].toWX())
         self.chkVisible.Value = s['Visible']
 

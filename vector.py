@@ -10,9 +10,9 @@ class Vec2f(object):
         return math.sqrt( self.x*self.x + self.y*self.y )
 
     def normalize(self):
-        len = self.length();
-        self.x /= len
-        self.y /= len
+        ln = self.length();
+        self.x /= ln
+        self.y /= ln
         
     def scalarMult(self, f):
         self.x = self.x * f
@@ -56,10 +56,10 @@ class Vec3f(object):
             self.z = z
     
     def normalize(self):
-        len = self.length()
-        self.x /= len
-        self.y /= len
-        self.z /= len
+        ln = self.length()
+        self.x /= ln
+        self.y /= ln
+        self.z /= ln
     
     def length(self):
         return math.sqrt( self.x*self.x + self.y*self.y + self.z*self.z )

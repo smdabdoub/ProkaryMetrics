@@ -88,19 +88,25 @@ class DataStore(object):
             m[2].extend([marker.z for marker in bact.Markers])
         
         return m
+    
+    @classmethod
+    def IsEmpty(cls):
+        if not cls._bacteria:
+            return True
+        return False
         
     @classmethod
-    def AddImageSet(cls, color, filepaths, id=None):
-        if id is None:
+    def AddImageSet(cls, color, filepaths, ID=None):
+        if ID is None:
             if cls._imageSets:
-                    id = cls.sortImageSets()[-1][0] + 1
+                    ID = cls.sortImageSets()[-1][0] + 1
             else:
-                id = 0
-        cls._imageSets[id] = ImageSet(id, color, filepaths)
-        return id
+                ID = 0
+        cls._imageSets[ID] = ImageSet(ID, color, filepaths)
+        return ID
         
     @classmethod
-    def GetImageSet(cls, id):
+    def GetImageSet(cls, ID):
         """
         Retrieves the ImageSet corresponding to the given ID.
         
@@ -109,8 +115,8 @@ class DataStore(object):
         :@rtype: ImageSet
         :@return: The ImageSet object with the matching ID.
         """
-        if id in cls._imageSets:
-            return cls._imageSets[id]
+        if ID in cls._imageSets:
+            return cls._imageSets[ID]
     
     @classmethod
     def ImageSets(cls):
@@ -127,8 +133,8 @@ class DataStore(object):
         
         
 class ImageSet(object):
-    def __init__(self, id, color, filepaths):
-        self.id = id
+    def __init__(self, ID, color, filepaths):
+        self.id = ID
         self.color = color
         self.filepaths = filepaths
         

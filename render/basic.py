@@ -130,9 +130,9 @@ class ImageRenderer(object):
         return self.imageSetID
     
     #TODO: this should probably be moved into the data.imageIO.VolumeImageReader code
-    def SetImageSet(self, id):
-        self.imageSetID = id
-        self.color = DataStore.GetImageSet(id).color
+    def SetImageSet(self, ID):
+        self.imageSetID = ID
+        self.color = DataStore.GetImageSet(ID).color
     
     @property
     def VolumeMapper(self):

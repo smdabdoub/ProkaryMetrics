@@ -16,12 +16,12 @@ exportFormats = '|'.join(['PNG (*.png)|*.png', 'JPG (*.JPG)|*.jpg',
                           'TIFF (*.tiff)|*.tiff', 'PNM (*.pnm)|*.pnm', 
                           'PostScript (*.ps)|*.ps', 'BMP (*.bmp)|*.bmp'])
 
-def saveScreen(path, type, renWin):
+def saveScreen(path, expType, renWin):
     imageFilter = vtk.vtkWindowToImageFilter()
     imageFilter.SetInput(renWin)
     imageFilter.Modified()
 
-    imageWriter = exportClasses[type]()
+    imageWriter = exportClasses[expType]()
     imageWriter.SetInput(imageFilter.GetOutput())
     imageWriter.SetFileName(path)
     imageWriter.Write()

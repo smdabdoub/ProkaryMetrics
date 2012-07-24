@@ -3,19 +3,43 @@ Created on Jul 24, 2011
 
 @author: shareef
 '''
-from data.io import writeCSV
 from render.basic import generateSpline
 from store import DataStore
 from vector import Vec3f
-import numpy as np
 import scipy as s
 import scipy.stats as ss
 from collections import namedtuple
+
+#from data.io import writeCSV
+#import numpy as np
 
 DescriptiveStats = namedtuple('DescriptiveStats', 'mean med std q1 q3')
 
 HFF = 2.86
 ds = Vec3f(0.1,0.1,0.56)
+
+def calculateLengths():
+    """
+    Calculate the lengths of all the recorded bacteria
+    """
+    lengths = []
+    
+    for _, bact in enumerate(DataStore.Bacteria()):
+        blen = len(bact.Markers)
+        if blen == 2:
+            v = bact.Markers[0] - bact.Markers[1]
+            lengths.append(str(v.length()))
+
+        #TODO: calculate filament lengths
+        if blen > 2:
+            pass
+    
+    # if there are no bacteria, return
+    if not lengths:
+        return None
+    
+    return lengths
+
 
 def communityDistanceStats():
     """
@@ -40,7 +64,7 @@ def communityDistanceStats():
             dist.append((centers[i] - centers[j]).length())
 
     
-    writeCSV(np.vstack(dist), ['dist'], 'density.csv')
+#    writeCSV(np.vstack(dist), ['dist'], 'density.csv')
 
     return generateDescriptiveStats(dist)
 
@@ -58,7 +82,7 @@ def communityOrientationStats():
     sRes = []
     bacilli = []
     filaments = []
-    lengths = []
+    #lengths = []
     xbasis = Vec3f(1,0,0)
     ybasis = Vec3f(0,1,0)
     zbasis = Vec3f(0,0,1)
@@ -68,7 +92,7 @@ def communityOrientationStats():
         if blen == 2:
             bacilli.append(DataStore.BacteriaActors()[i])
             v = bact.Markers[0] - bact.Markers[1]
-            lengths.append(v.length())
+            #lengths.append(v.length())
             v.normalize()
             bdots[0].append(xbasis.dot(v))
             bdots[1].append(ybasis.dot(v))

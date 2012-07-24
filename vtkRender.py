@@ -41,7 +41,7 @@ class IBCRenderPanel(wx.Panel):
         
         self.ao = ao
         self.aa = False
-        
+        self.firstRender = True
 
         self.vtkWidget = wxVTKRenderWindowInteractor(self, wx.ID_ANY)
         self.iren = self.vtkWidget._Iren
@@ -49,7 +49,9 @@ class IBCRenderPanel(wx.Panel):
         
         self.renderer = vtk.vtkRenderer()
         self.renderer.SetBackground(0,0,0)
-        self.imageLayer = IBCRenderer(self.renderer, self.iren.Render)
+        self.imageLayer = {}
+        self.CISID = -1  # Current Image Set ID
+        self.imageLayer[self.CISID] = IBCRenderer(self.renderer, self.iren.Render)
         self.bacteriaLayer = BacteriaLayer(self.renderer, self.iren.Render)
         
         self.viewCamActive = True
@@ -135,43 +137,52 @@ class IBCRenderPanel(wx.Panel):
         selectedOutlineProperty.SetLineWidth(3)
     
 
-    def RenderImageData(self, id, imgReader):
-        self.imageLayer.SetImageSet(id)
-        locator = self.imageLayer.Render(imgReader)
+    def RenderImageData(self, ID, imgReader):
+        # check if this is the first loaded image set
+        if self.CISID == -1:
+            self.imageLayer = {}
+        
+        self.CISID = ID
+        self.imageLayer[self.CISID] = IBCRenderer(self.renderer, self.iren.Render)
+        self.imageLayer[self.CISID].SetImageSet(ID)
+        locator = self.imageLayer[self.CISID].Render(imgReader)
         self.initPicker()
         self.picker.AddLocator(locator)
         self.initBoxWidgetInteraction(imgReader.VolumeReader.GetOutput())
         
-        self.iren.AddObserver("MouseMoveEvent", self.MoveCursor)
-        self.iren.AddObserver("LeftButtonPressEvent", self.LeftClick)
-        self.iren.AddObserver("RightButtonPressEvent", self.RightClick)
-        
-        # It is convenient to create an initial view of the data. The FocalPoint
-        # and Position form a vector direction. Later on (ResetCamera() method)
-        # this vector is used to position the camera to look at the data in
-        # this direction.
-        self.viewCam = vtk.vtkCamera()
-        self.viewCam.SetViewUp(0, 0, -1)
-        self.viewCam.SetPosition(0, 1.1, 2)
-        self.viewCam.SetFocalPoint(0, -0.25, 0)
-        self.viewCam.ComputeViewPlaneNormal()
-        
-        # This camera should generally stay stationary, 
-        # and only be used for taking screenshots
-        self.picCam = vtk.vtkCamera()
-        self.picCam.SetViewUp(0, 0, -1)
-        self.picCam.SetPosition(0, 1.1, 2)
-        self.picCam.SetFocalPoint(0, -0.25, 0)
-        self.picCam.ComputeViewPlaneNormal()
-        
-        # Actors are added to the renderer. An initial camera view is created.
-        # The Dolly() method moves the camera towards the FocalPoint,
-        # thereby enlarging the image.
-        self.renderer.SetActiveCamera(self.viewCam)
-        self.renderer.ResetCamera() 
-        self.viewCam.Dolly(1.0)
-        self.renderer.ResetCameraClippingRange()
-        self.iren.Render()
+        if self.firstRender:
+            self.iren.AddObserver("MouseMoveEvent", self.MoveCursor)
+            self.iren.AddObserver("LeftButtonPressEvent", self.LeftClick)
+            self.iren.AddObserver("RightButtonPressEvent", self.RightClick)
+            
+            # It is convenient to create an initial view of the data. The FocalPoint
+            # and Position form a vector direction. Later on (ResetCamera() method)
+            # this vector is used to position the camera to look at the data in
+            # this direction.
+            self.viewCam = vtk.vtkCamera()
+            self.viewCam.SetViewUp(0, 0, -1)
+            self.viewCam.SetPosition(0, 1.1, 2)
+            self.viewCam.SetFocalPoint(0, -0.25, 0)
+            self.viewCam.ComputeViewPlaneNormal()
+            
+            # This camera should generally stay stationary, 
+            # and only be used for taking screenshots
+            self.picCam = vtk.vtkCamera()
+            self.picCam.SetViewUp(0, 0, -1)
+            self.picCam.SetPosition(0, 1.1, 2)
+            self.picCam.SetFocalPoint(0, -0.25, 0)
+            self.picCam.ComputeViewPlaneNormal()
+            
+            # Actors are added to the renderer. An initial camera view is created.
+            # The Dolly() method moves the camera towards the FocalPoint,
+            # thereby enlarging the image.
+            self.renderer.SetActiveCamera(self.viewCam)
+            self.renderer.ResetCamera() 
+            self.viewCam.Dolly(1.0)
+            self.renderer.ResetCameraClippingRange()
+            self.iren.Render()
+            
+            self.firstRender = False
         
     
     def CaptureCamera(self):
@@ -248,7 +259,7 @@ class IBCRenderPanel(wx.Panel):
             self.renderer.RemoveActor(self.ellipsoid)
             
         try:
-            ds = Vec3f(self.imageLayer.dataSpacing)
+            ds = Vec3f(self.imageLayer[self.CISID].dataSpacing)
             ar = self.bacteriaLayer.actor_radius
             self.ellipsoid, out = fitEllipsoid(ds, ar, mve)
             self.ao(out)
@@ -263,7 +274,7 @@ class IBCRenderPanel(wx.Panel):
             self.ellipsoid.SetVisibility(vstate[self.ellipsoid.GetVisibility()])
             
     def CalculateOrientations(self):
-        ds = communityOrientationStats(angle=True)
+        ds = communityOrientationStats()
         
         for s in ds:
             self.ao(str(s))
@@ -325,15 +336,24 @@ class IBCRenderPanel(wx.Panel):
         self.ao(str(ds))
     
     # ACCESSORS/MODIFIERS
+    def GetImageLayerByID(self, ID):
+        if ID in self.imageLayer:
+            return self.imageLayer[ID]
+        return None
+    
+    def SetCurrentImageLayer(self, ID):
+        if ID in self.imageLayer:
+            self.CISID = ID
+    
     @property
     def ImageLayer(self):
         """
-        Returns a reference to the IBCRenderer class that 
+        Returns a reference to the current IBCRenderer class that 
         tesselates the data into a vtkActor.
         
         :@rtype: render.ibc.IBCRenderer
         """
-        return self.imageLayer
+        return self.imageLayer[self.CISID]
     
     @property
     def BacteriaLayer(self):
@@ -479,7 +499,7 @@ class IBCRenderPanel(wx.Panel):
         
     def ClipVolumeRender(self, obj, event):
         obj.GetPlanes(self.planes)
-        self.imageLayer.VolumeMapper.SetClippingPlanes(self.planes)
+        self.imageLayer[self.CISID].VolumeMapper.SetClippingPlanes(self.planes)
         
     
     # UTILITY METHODS

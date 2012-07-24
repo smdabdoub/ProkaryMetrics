@@ -7,8 +7,6 @@ from render.basic import createEllipsoid, createSphere
 from store import DataStore
 from vector import Vec3f
 
-import csv
-import math
 from numpy import *
 import numpy.linalg as la
 import vtk
