@@ -123,7 +123,7 @@ def testPaths(paths):
     """ 
     validate the directory of the stored image paths
     """
-    def replacePathsDir():
+    def replacePathsDir(newPath, paths):
         return [os.path.join(newPath, os.path.split(p)[1]) for p in paths]
     
     def chooseDir():
@@ -138,9 +138,9 @@ def testPaths(paths):
         
     # make sure the directory the files are supposed to be in actually exists
     if not os.path.exists(os.path.split(paths[0])[0]):
-        wx.MessageBox("The path to the images stored in the project \
-                      does not exist.\n Please choose the current folder \
-                      where the files exist.", "Error Loading Project", 
+        wx.MessageBox("The path to the images stored in the project " +
+                      "does not exist.\n\n Please select the folder " +
+                      "containing the image data.", "Error Loading Project", 
                       wx.OK|wx.ICON_ERROR)
         
 

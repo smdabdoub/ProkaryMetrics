@@ -299,21 +299,24 @@ class MainWindow(wx.Frame):
                 bactLayerSettings = settings['bacteria-layer-settings']
             
             # temp backwards compatibility
-            idArray = settings['image-set-ids'] if 'image-set-ids' in settings else settings['image-set']
+            idArray = settings['image-set-ids'] if 'image-set-ids' in settings else settings['image-sets']
             
             for imgSetID in idArray:
                 imgSettings = settings['img-%i' % imgSetID]
-                paths = dio.testPaths(DataStore.ImageSets()[imgSetID].filepaths)
+                paths = dio.testPaths(DataStore.GetImageSet(imgSetID).filepaths)
                 if not paths:
                     wx.MessageBox("The project could not be loaded.", 
                                   "Error Loading Project", 
                                   wx.OK|wx.ICON_INFORMATION)
                     return
                 
+                # update stored paths
+                DataStore.GetImageSet(imgSetID).filepaths = paths
+                
                 # get correct file reader by stored file extension
-                ftype = os.path.splitext(DataStore.ImageSets()[imgSetID].filepaths[0])[1]
+                ftype = os.path.splitext(paths[0])[1]
                 readerClass = imageIOTypes.GetReaderByType(ftype)
-                imgReader = readerClass(DataStore.GetImageSet(imgSetID).filepaths)
+                imgReader = readerClass(paths)
                 self.AddImageSet(imgReader, imgSetID)
                 self.pnlIBCRender.GetImageLayerByID(imgSetID).Settings = imgSettings
             
