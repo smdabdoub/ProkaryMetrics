@@ -1,5 +1,6 @@
 from calc.fitting import fitEllipsoid
 from calc.stat import communityDistanceStats, communityOrientationStats
+from data.util import NoBacteria
 from render.ibc import IBCRenderer
 from render.bacteria import BacteriaLayer
 from render.basic import boolInt
@@ -274,12 +275,16 @@ class IBCRenderPanel(wx.Panel):
             self.ellipsoid.SetVisibility(vstate[self.ellipsoid.GetVisibility()])
             
     def CalculateOrientations(self):
+        if NoBacteria(): return
+        
         ds = communityOrientationStats()
         
         for s in ds:
             self.ao(str(s))
             
     def ColorByOrientation(self, colorScheme=None):
+        if NoBacteria(): return
+        
         bacilli, filaments, bdots, fdots, sRes = communityOrientationStats()
         bdots = [map(abs, bdots[i]) for i in range(3)]
         fdots = [map(abs, fdots[i]) for i in range(3)]
@@ -332,6 +337,7 @@ class IBCRenderPanel(wx.Panel):
     
 
     def CalculateCommunityDensity(self):
+        if NoBacteria(): return
         ds = communityDistanceStats()
         self.ao(str(ds))
     

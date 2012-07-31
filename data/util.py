@@ -3,8 +3,18 @@ Created on Aug 12, 2011
 
 @author: Shareef Dabdoub
 '''
+from store import DataStore
+
 import numpy as np
 import vtk
+import wx
+
+
+def NoBacteria():
+    if DataStore.IsEmpty():
+        wx.MessageBox("There are no recorded bacteria", "Error", wx.ICON_ERROR | wx.OK)
+        return True
+    return False
 
 def CopyMatrix4x4(matrix):
     """
